@@ -1,0 +1,1955 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐟 多人捕魚機遊戲</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            width: 100vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: visible;
+            width: 1420px;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .game-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .score {
+            background: #e74c3c;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .room-info {
+            background: #9b59b6;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .game-area {
+            width: 1400px;
+            height: 700px;
+            background: linear-gradient(to bottom, #4a90e2, #2c5aa0);
+            position: relative;
+            overflow: hidden;
+            cursor: crosshair;
+            border: 3px solid #1e3a5f;
+            border-radius: 10px;
+            margin: 5px auto;
+        }
+
+        .game-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse 400px 200px at 20% 80%, rgba(30, 144, 255, 0.15) 0%, transparent 70%),
+                radial-gradient(ellipse 300px 150px at 80% 20%, rgba(65, 105, 225, 0.12) 0%, transparent 65%),
+                radial-gradient(ellipse 350px 180px at 40% 60%, rgba(100, 149, 237, 0.1) 0%, transparent 60%);
+            animation: wave-movement 8s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .game-area::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(ellipse 350px 180px at 70% 30%, rgba(30, 144, 255, 0.12) 0%, transparent 65%),
+                radial-gradient(ellipse 280px 140px at 25% 70%, rgba(65, 105, 225, 0.1) 0%, transparent 60%),
+                radial-gradient(ellipse 320px 160px at 60% 85%, rgba(100, 149, 237, 0.08) 0%, transparent 55%);
+            animation: wave-movement-reverse 10s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        @keyframes wave-movement {
+
+            0%,
+            100% {
+                transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+
+            25% {
+                transform: translateX(15px) translateY(-8px) scale(1.1) rotate(1deg);
+                opacity: 0.8;
+            }
+
+            50% {
+                transform: translateX(-8px) translateY(15px) scale(0.9) rotate(-1deg);
+                opacity: 0.6;
+            }
+
+            75% {
+                transform: translateX(-12px) translateY(-10px) scale(1.05) rotate(0.5deg);
+                opacity: 0.9;
+            }
+        }
+
+        @keyframes wave-movement-reverse {
+
+            0%,
+            100% {
+                transform: translateX(0) translateY(0) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+
+            30% {
+                transform: translateX(-12px) translateY(18px) scale(1.08) rotate(-1.5deg);
+                opacity: 0.7;
+            }
+
+            60% {
+                transform: translateX(18px) translateY(-9px) scale(0.92) rotate(1.2deg);
+                opacity: 0.5;
+            }
+
+            90% {
+                transform: translateX(-6px) translateY(-15px) scale(1.03) rotate(-0.8deg);
+                opacity: 0.8;
+            }
+        }
+
+        .fish {
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            z-index: 15;
+        }
+
+        .fish:hover {
+            transform: scale(1.1);
+        }
+
+        .fish.small {
+            font-size: 30px;
+        }
+
+        .fish.medium {
+            font-size: 45px;
+        }
+
+        .fish.large {
+            font-size: 60px;
+        }
+
+        .fish.boss {
+            font-size: 90px;
+        }
+
+        .bullet {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            z-index: 12;
+            /* 背景顏色和陰影將由JavaScript動態設置 */
+        }
+
+        .controls {
+            background: #34495e;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 400px;
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .hidden {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        /* 強制隱藏模態框 */
+        #roomSelectionModal.hidden {
+            display: none !important;
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .status.success {
+            background-color: #27ae60;
+        }
+
+        .status.error {
+            background-color: #e74c3c;
+        }
+
+        .status.info {
+            background-color: #3498db;
+        }
+
+        .status.warning {
+            background-color: #f39c12;
+        }
+
+        .auto-mode-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #ecf0f1;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 8px 12px;
+            background: rgba(52, 73, 94, 0.8);
+            border-radius: 5px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .auto-mode-label:hover {
+            background: rgba(52, 73, 94, 1);
+            border-color: #3498db;
+        }
+
+        .auto-mode-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .auto-mode-label.active {
+            background: rgba(46, 204, 113, 0.2);
+            border-color: #2ecc71;
+            color: #2ecc71;
+        }
+
+        .status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .status.success {
+            background: #27ae60;
+        }
+
+        .status.error {
+            background: #e74c3c;
+        }
+
+        .status.info {
+            background: #3498db;
+        }
+
+        .players-list {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 25;
+        }
+
+        .explosion {
+            position: absolute;
+            font-size: 40px;
+            color: #f39c12;
+            animation: explode 0.5s ease-out;
+            z-index: 25;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(2);
+                opacity: 0;
+            }
+        }
+
+        /* 模態框樣式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .modal-footer {
+            background: #ecf0f1;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .rooms-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .room-item {
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .room-item:hover {
+            border-color: #3498db;
+            background: #f8f9fa;
+        }
+
+        .room-item.full {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .room-item.full:hover {
+            border-color: #bdc3c7;
+            background: white;
+        }
+
+        .room-info h3 {
+            margin: 0 0 5px 0;
+            color: #2c3e50;
+        }
+
+        .room-info p {
+            margin: 0;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .room-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .players-count {
+            background: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .players-count.full {
+            background: #e74c3c;
+        }
+
+        .room-status-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .room-status-badge.waiting {
+            background: #f39c12;
+            color: white;
+        }
+
+        .room-status-badge.playing {
+            background: #27ae60;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+
+        .no-rooms {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 登入表單 -->
+    <div id="loginForm" class="login-form">
+        <h1>🐟 多人捕魚機</h1>
+        <p style="margin-bottom: 30px; color: #7f8c8d;">歡迎來到海底世界！</p>
+
+        <div class="form-group">
+            <label for="username">用戶名</label>
+            <input type="text" id="username" placeholder="請輸入用戶名">
+        </div>
+
+        <div class="form-group">
+            <label for="password">密碼</label>
+            <input type="password" id="password" placeholder="請輸入密碼">
+        </div>
+
+        <button class="btn btn-primary" onclick="login()" style="width: 100%; margin-bottom: 10px;">登入遊戲</button>
+        <button class="btn btn-success" onclick="register()" style="width: 100%;">註冊帳號</button>
+    </div>
+
+    <!-- 遊戲主界面 -->
+    <div id="gameContainer" class="game-container hidden">
+        <div class="game-header">
+            <div>
+                <h1>🐟 多人捕魚機</h1>
+                <span class="room-info" id="roomInfo">未加入房間</span>
+            </div>
+            <div class="user-info">
+                <span>玩家: <span id="playerName">-</span></span>
+                <span class="score">餘額: <span id="playerBalance">0</span> 💰</span>
+                <span class="score">總分: <span id="playerScore">0</span> 🏆</span>
+                <button class="btn btn-danger" onclick="logout()">登出</button>
+            </div>
+        </div>
+
+        <div class="game-area" id="gameArea">
+            <!-- 玩家列表 -->
+            <div class="players-list" id="playersList">
+                <div><strong>房間玩家:</strong></div>
+            </div>
+            <!-- 魚、子彈會動態生成在這裡 -->
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <button class="btn btn-primary" id="findRoomBtn">尋找房間</button>
+                <button class="btn btn-info" id="selectRoomBtn">選擇房間</button>
+                <button class="btn btn-success" id="createRoomBtn">創建房間</button>
+            </div>
+            <div class="control-group">
+                <button class="btn btn-success" id="startGameBtn" disabled>開始遊戲</button>
+                <button class="btn btn-primary" id="leaveRoomBtn" disabled>離開房間</button>
+            </div>
+            <div class="control-group">
+                <label class="auto-mode-label">
+                    <input type="checkbox" id="autoModeCheckbox">
+                    <span>🤖 邊緣人模式 (自動射擊)</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 房間選擇模態框 -->
+    <div id="roomSelectionModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>選擇房間</h2>
+                <button class="close-btn" onclick="closeRoomSelection()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="roomsList" class="rooms-list">
+                    <div class="loading">載入中...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="refreshRoomsList()">重新整理</button>
+                <button class="btn btn-danger" onclick="closeRoomSelection()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 動態載入 Socket.IO
+        function loadSocketIO() {
+            return new Promise((resolve, reject) => {
+                // 檢查是否已經載入
+                if (typeof io !== 'undefined') {
+                    console.log('Socket.IO 已經載入');
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'http://localhost:8083/socket.io/socket.io.js';
+
+                // 設置超時
+                const timeout = setTimeout(() => {
+                    console.error('Socket.IO 載入超時');
+                    reject(new Error('Socket.IO 載入超時'));
+                }, 10000); // 10秒超時
+
+                script.onload = () => {
+                    clearTimeout(timeout);
+                    console.log('Socket.IO 載入成功');
+                    resolve();
+                };
+
+                script.onerror = () => {
+                    clearTimeout(timeout);
+                    console.error('無法載入 Socket.IO 庫');
+                    reject(new Error('Socket.IO 載入失敗'));
+                };
+
+                document.head.appendChild(script);
+            });
+        }
+    </script>
+    <script>
+        // 全局變數
+        let currentUser = null;
+        let socket = null;
+        let gameState = {
+            isPlaying: false,
+            roomId: null,
+            players: {},
+            fishes: {},
+            bullets: {},
+            score: 0,
+            balance: 0
+        };
+
+        // 邊緣人模式變數
+        let autoModeEnabled = false;
+        let autoModeInterval = null;
+
+        // API 基礎 URL
+        const API_BASE = 'http://localhost:8082';
+        const GAME_SERVER = 'http://localhost:8083';
+
+        // 調試模式
+        const DEBUG = true;
+        function debugLog(...args) {
+            if (DEBUG) {
+                console.log('[DEBUG]', ...args);
+            }
+        }
+
+        // 顯示狀態訊息
+        function showStatus(message, type = 'success') {
+            const existingStatus = document.querySelector('.status');
+            if (existingStatus) {
+                existingStatus.remove();
+            }
+
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            document.body.appendChild(status);
+
+            setTimeout(() => {
+                if (status.parentNode) {
+                    status.parentNode.removeChild(status);
+                }
+            }, 3000);
+        }
+
+        // 用戶註冊
+        async function register() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                showStatus('請填寫用戶名和密碼', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/users/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('註冊成功！請登入');
+                } else {
+                    showStatus(data.message || '註冊失敗', 'error');
+                }
+            } catch (error) {
+                console.error('註冊錯誤:', error);
+                showStatus('網路錯誤，請檢查服務是否正常運行', 'error');
+            }
+        }
+
+        // 用戶登入
+        async function login() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            if (!username || !password) {
+                showStatus('請填寫用戶名和密碼', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/users/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentUser = {
+                        username,
+                        token: data.data.token,
+                        userId: data.data.userId,
+                        balance: data.data.balance || 1000
+                    };
+
+                    // 初始化遊戲狀態
+                    gameState.balance = currentUser.balance;
+
+                    // 更新 UI 顯示
+                    document.getElementById('playerName').textContent = username;
+                    document.getElementById('playerBalance').textContent = currentUser.balance;
+
+                    // 切換到遊戲界面
+                    document.getElementById('loginForm').classList.add('hidden');
+                    document.getElementById('gameContainer').classList.remove('hidden');
+
+                    // 連接 WebSocket
+                    connectWebSocket();
+
+                    showStatus('登入成功！請創建或加入房間開始遊戲');
+                } else {
+                    showStatus(data.message || '登入失敗', 'error');
+                }
+            } catch (error) {
+                console.error('登入錯誤:', error);
+                showStatus('網路錯誤，請檢查服務是否正常運行', 'error');
+            }
+        }
+
+        // 登出
+        function logout() {
+            // 關閉自動模式
+            if (autoModeEnabled) {
+                const checkbox = document.getElementById('autoModeCheckbox');
+                if (checkbox) {
+                    checkbox.checked = false;
+                    toggleAutoMode();
+                }
+            }
+
+            if (socket) {
+                socket.disconnect();
+            }
+            currentUser = null;
+            gameState = { isPlaying: false, roomId: null, players: {}, fishes: {}, bullets: {}, score: 0, balance: 0 };
+
+            document.getElementById('gameContainer').classList.add('hidden');
+            document.getElementById('loginForm').classList.remove('hidden');
+
+            // 清空表單
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+
+            // 重置UI
+            updateUI();
+
+            showStatus('已登出');
+        }
+
+        // 連接 WebSocket
+        function connectWebSocket() {
+            // 如果已經有連接，先斷開
+            if (socket && socket.connected) {
+                socket.disconnect();
+            }
+
+            socket = io(GAME_SERVER);
+
+            socket.on('connect', () => {
+                console.log('WebSocket 連接成功');
+                showStatus('遊戲伺服器連接成功', 'info');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('WebSocket 連接斷開');
+                showStatus('與遊戲伺服器斷開連接', 'error');
+            });
+
+            // 成功加入房間
+            socket.on('joined-room', (data) => {
+                console.log('收到 joined-room 事件:', data);
+
+                if (!data || !data.roomId) {
+                    console.error('joined-room 事件數據無效:', data);
+                    showStatus('加入房間失敗：數據無效', 'error');
+                    return;
+                }
+
+                // 先清理之前的房間狀態
+                clearGameArea();
+                gameState.players = {};
+                gameState.fishes = {};
+                gameState.bullets = {};
+                gameState.isPlaying = false;
+
+                // 設置新房間狀態
+                gameState.roomId = data.roomId;
+
+                // 安全地處理 gameState 數據
+                const serverGameState = data.gameState || {};
+                gameState.players = serverGameState.players || {};
+                gameState.fishes = serverGameState.fishes || {};
+                gameState.bullets = serverGameState.bullets || {};
+                gameState.isPlaying = serverGameState.isActive || false;
+
+                console.log('更新後的遊戲狀態:', gameState);
+
+                updateUI();
+                updatePlayersDisplay();
+                updateGameArea();
+
+                showStatus(`已加入房間: ${data.roomId}`, 'success');
+            });
+
+            // 新玩家加入
+            socket.on('player-joined', (data) => {
+                if (data && data.playerId && data.player) {
+                    gameState.players[data.playerId] = data.player;
+                    updatePlayersDisplay();
+                    showStatus(`${data.username || '玩家'} 加入了房間`, 'info');
+                }
+            });
+
+            // 玩家離開
+            socket.on('player-left', (data) => {
+                if (data && data.playerId && gameState.players[data.playerId]) {
+                    delete gameState.players[data.playerId];
+                    updatePlayersDisplay();
+                    showStatus(`玩家離開了房間`, 'info');
+                }
+            });
+
+            // 遊戲開始
+            socket.on('game-started', (data) => {
+                console.log('收到 game-started 事件:', data);
+                gameState.isPlaying = true;
+                updateUI();
+                showStatus('遊戲開始！點擊遊戲區域進行射擊', 'success');
+            });
+
+            // 魚群生成
+            socket.on('fish-spawned', (fish) => {
+                if (fish && fish.id && fish.roomId === gameState.roomId) {
+                    console.log(`[前端] 收到魚類生成事件: ${fish.id}, 當前房間: ${gameState.roomId}, 魚類總數: ${Object.keys(gameState.fishes).length + 1}`);
+                    gameState.fishes[fish.id] = fish;
+                    createFishElement(fish);
+                } else if (fish && fish.id) {
+                    console.log(`[前端] 忽略其他房間的魚類: ${fish.id}, 魚類房間: ${fish.roomId}, 當前房間: ${gameState.roomId}`);
+                }
+            });
+
+            // 魚群移動
+            socket.on('fish-moved', (data) => {
+                if (data && data.fishId && gameState.fishes[data.fishId]) {
+                    gameState.fishes[data.fishId].x = data.x;
+                    gameState.fishes[data.fishId].y = data.y;
+                    updateFishPosition(data.fishId, data.x, data.y);
+                }
+            });
+
+            // 子彈發射
+            socket.on('bullet-fired', (bullet) => {
+                if (bullet && bullet.id) {
+                    gameState.bullets[bullet.id] = bullet;
+                    createBulletElement(bullet);
+                }
+            });
+
+            // 餘額更新
+            socket.on('balance-updated', (data) => {
+                console.log('[前端] 收到餘額更新:', data);
+                if (data && data.balance !== undefined) {
+                    gameState.balance = data.balance;
+                    currentUser.balance = data.balance;
+
+                    // 更新餘額顯示
+                    const balanceElement = document.getElementById('playerBalance');
+                    if (balanceElement) {
+                        balanceElement.textContent = data.balance;
+                        console.log('[前端] 餘額顯示已更新為:', data.balance);
+                    }
+
+                    // 更新遊戲狀態顯示
+                    updateGameStatus();
+
+                    // 顯示餘額變化提示
+                    if (data.change && data.reason) {
+                        const changeText = data.change > 0 ? `+${data.change}` : `${data.change}`;
+                        const reasonText = data.reason === 'bullet_fired' ? '發射子彈' : '擊中魚類';
+                        showStatus(`${reasonText}: ${changeText} 💰`, data.change > 0 ? 'success' : 'info');
+                    }
+                }
+            });
+
+            // 餘額不足
+            socket.on('insufficient-balance', (data) => {
+                showStatus(data.message || '餘額不足，無法發射子彈', 'error');
+            });
+
+            // 子彈移動
+            socket.on('bullet-moved', (data) => {
+                if (data && data.bulletId && data.x !== undefined && data.y !== undefined) {
+                    updateBulletPosition(data.bulletId, data.x, data.y);
+                }
+            });
+
+            // 碰撞命中
+            socket.on('collision-hit', (data) => {
+                if (!data || !data.fishId || !data.bulletId) return;
+
+                // 獲取魚的位置用於爆炸效果
+                const fish = gameState.fishes[data.fishId];
+
+                // 移除魚和子彈
+                if (gameState.fishes[data.fishId]) {
+                    delete gameState.fishes[data.fishId];
+                }
+                if (gameState.bullets[data.bulletId]) {
+                    delete gameState.bullets[data.bulletId];
+                }
+
+                removeFishElement(data.fishId);
+                removeBulletElement(data.bulletId);
+
+                // 更新玩家分數和餘額
+                if (data.playerId && gameState.players[data.playerId]) {
+                    // 更新玩家數據
+                    if (data.newScore !== undefined) {
+                        gameState.players[data.playerId].score = data.newScore;
+                    }
+                    if (data.newBalance !== undefined) {
+                        gameState.players[data.playerId].balance = data.newBalance;
+                    }
+                }
+
+                // 如果是當前用戶，同時更新UI
+                if (data.playerId === currentUser?.userId) {
+                    if (data.newScore !== undefined) {
+                        gameState.score = data.newScore;
+                        const scoreElement = document.getElementById('playerScore');
+                        if (scoreElement) {
+                            scoreElement.textContent = gameState.score;
+                        }
+                    }
+
+                    if (data.newBalance !== undefined) {
+                        gameState.balance = data.newBalance;
+                        currentUser.balance = data.newBalance;
+                        const balanceElement = document.getElementById('playerBalance');
+                        if (balanceElement) {
+                            balanceElement.textContent = gameState.balance;
+                        }
+                    }
+
+                    showStatus(`命中！獲得 ${data.reward || 0} 分 💰`, 'success');
+                }
+
+                // 更新玩家列表顯示
+                updatePlayersDisplay();
+
+                // 顯示爆炸效果
+                if (fish && fish.x !== undefined && fish.y !== undefined) {
+                    showExplosion(fish.x, fish.y);
+                }
+            });
+
+            // 子彈過期
+            socket.on('bullet-expired', (data) => {
+                if (data && data.bulletId && gameState.bullets[data.bulletId]) {
+                    delete gameState.bullets[data.bulletId];
+                    removeBulletElement(data.bulletId);
+                }
+            });
+        }
+
+        // 尋找房間
+        async function findRoom() {
+            debugLog('尋找房間按鈕被點擊');
+
+            if (!currentUser) {
+                debugLog('用戶未登入');
+                showStatus('請先登入', 'error');
+                return;
+            }
+
+            try {
+                debugLog('發送尋找房間請求');
+                const response = await fetch(`${API_BASE}/api/v1/matching/find-room`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        nickname: currentUser.username,
+                        balance: 1000
+                    })
+                });
+
+                const data = await response.json();
+                debugLog('尋找房間響應:', data);
+
+                if (data.success) {
+                    if (data.data.roomId) {
+                        joinRoom(data.data.roomId);
+                    } else {
+                        showStatus(data.message, 'info');
+                    }
+                } else {
+                    showStatus(data.message || '尋找房間失敗', 'error');
+                }
+            } catch (error) {
+                console.error('尋找房間錯誤:', error);
+                showStatus('網路錯誤', 'error');
+            }
+        }
+
+        // 創建房間
+        let isCreatingRoom = false; // 全局標記防止重複創建
+        async function createRoom() {
+            console.log('[前端] 創建房間函數被調用');
+            debugLog('創建房間按鈕被點擊');
+
+            if (!currentUser) {
+                debugLog('用戶未登入');
+                showStatus('請先登入', 'error');
+                return;
+            }
+
+            // 防止重複點擊 - 使用全局標記
+            if (isCreatingRoom) {
+                debugLog('正在創建房間中，忽略重複點擊');
+                return;
+            }
+
+            const createBtn = document.getElementById('createRoomBtn');
+            if (createBtn.disabled) {
+                debugLog('按鈕已禁用，忽略重複點擊');
+                return;
+            }
+
+            // 設置創建標記和禁用按鈕
+            isCreatingRoom = true;
+            createBtn.disabled = true;
+            createBtn.textContent = '創建中...';
+
+            try {
+                debugLog('發送創建房間請求');
+                const response = await fetch(`${API_BASE}/api/v1/lobby/rooms/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: `${currentUser.username}的房間`,
+                        maxPlayers: 4
+                    })
+                });
+
+                const data = await response.json();
+                debugLog('創建房間響應:', data);
+
+                if (data.success) {
+                    showStatus('房間創建成功', 'success');
+                    // 延遲一下再加入房間，確保房間已經完全創建
+                    setTimeout(() => {
+                        joinRoom(data.data.roomId);
+                    }, 100);
+                } else {
+                    showStatus(data.message || '創建房間失敗', 'error');
+                }
+            } catch (error) {
+                console.error('創建房間錯誤:', error);
+                showStatus('網路錯誤', 'error');
+            } finally {
+                // 恢復按鈕狀態和標記
+                setTimeout(() => {
+                    isCreatingRoom = false;
+                    createBtn.disabled = false;
+                    createBtn.textContent = '創建房間';
+                }, 1000); // 延遲1秒恢復，防止快速重複點擊
+            }
+        }
+
+        // 加入房間
+        async function joinRoom(roomId) {
+            if (!currentUser) {
+                showStatus('請先登入', 'error');
+                return;
+            }
+
+            try {
+                // 先通知遊戲會話服務
+                const response = await fetch(`${API_BASE}/api/v1/lobby/rooms/${roomId}/join`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId,
+                        username: currentUser.username
+                    })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    showStatus(data.message || '加入房間失敗', 'error');
+                    return;
+                }
+
+                // 再通知遊戲伺服器
+                if (socket) {
+                    const balanceToSend = currentUser.balance || gameState.balance || 1000;
+                    console.log(`[前端] 發送 join-room 事件，餘額: ${balanceToSend}`);
+                    socket.emit('join-room', {
+                        roomId: roomId,
+                        userId: currentUser.userId,
+                        username: currentUser.username,
+                        balance: balanceToSend
+                    });
+                }
+            } catch (error) {
+                console.error('加入房間錯誤:', error);
+                showStatus('網路錯誤', 'error');
+            }
+        }
+
+        // 離開房間
+        async function leaveRoom() {
+            if (!currentUser || !gameState.roomId) {
+                return;
+            }
+
+            try {
+                // 先通知遊戲會話服務
+                const response = await fetch(`${API_BASE}/api/v1/lobby/rooms/${gameState.roomId}/leave`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        userId: currentUser.userId
+                    })
+                });
+
+                // 再通知遊戲伺服器
+                if (socket) {
+                    socket.emit('leave-room', {
+                        roomId: gameState.roomId,
+                        userId: currentUser.userId
+                    });
+                }
+            } catch (error) {
+                console.error('離開房間錯誤:', error);
+            }
+
+            // 關閉自動模式
+            if (autoModeEnabled) {
+                const checkbox = document.getElementById('autoModeCheckbox');
+                if (checkbox) {
+                    checkbox.checked = false;
+                    toggleAutoMode();
+                }
+            }
+
+            gameState.roomId = null;
+            gameState.players = {};
+            gameState.fishes = {};
+            gameState.bullets = {};
+            gameState.isPlaying = false;
+
+            clearGameArea();
+            updateUI();
+
+            showStatus('已離開房間', 'info');
+        }
+
+        // 開始遊戲
+        function startGame() {
+            console.log('開始遊戲按鈕被點擊');
+            console.log('當前遊戲狀態:', gameState);
+
+            if (!gameState.roomId) {
+                showStatus('請先加入房間', 'error');
+                return;
+            }
+
+            if (!socket) {
+                showStatus('WebSocket 連接未建立', 'error');
+                return;
+            }
+
+            if (!socket.connected) {
+                showStatus('WebSocket 連接已斷開', 'error');
+                return;
+            }
+
+            console.log('發送 start-game 事件到房間:', gameState.roomId);
+            showStatus('正在開始遊戲...', 'info');
+
+            socket.emit('start-game', {
+                roomId: gameState.roomId
+            });
+        }
+
+        // 遊戲區域點擊事件
+        function setupGameAreaClick() {
+            const gameArea = document.getElementById('gameArea');
+            gameArea.addEventListener('click', (event) => {
+                if (!gameState.isPlaying || !gameState.roomId) return;
+
+                const rect = gameArea.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                // 發射子彈
+                fireBulletAt(x, y);
+            });
+        }
+
+        // 發射子彈到指定位置
+        function fireBulletAt(targetX, targetY) {
+            if (!socket || !currentUser || !gameState.isPlaying || !gameState.roomId) return;
+
+            const gameArea = document.getElementById('gameArea');
+            // 子彈從遊戲區域底部邊緣中央發射
+            const startX = 700;   // 橫向正中間 (1400/2)
+            const startY = 699;   // 最下面邊緣 (700-1)
+
+            // 計算方向：從底部中央指向點擊位置
+            const directionX = targetX - startX;
+            const directionY = targetY - startY;
+
+            // 正規化方向向量
+            const length = Math.sqrt(directionX * directionX + directionY * directionY);
+            const normalizedX = directionX / length;
+            const normalizedY = directionY / length;
+
+            // 計算子彈應該飛到的最終位置
+            // 使用固定的遊戲區域尺寸
+            const gameAreaWidth = 1400;
+            const gameAreaHeight = 700;
+
+            let finalTargetX, finalTargetY;
+
+            // 如果射擊方向太水平（normalizedY 接近 0），直接使用點擊位置
+            if (Math.abs(normalizedY) < 0.1) {
+                finalTargetX = targetX;
+                finalTargetY = targetY;
+            } else {
+                // 計算到達 y=0 時的 x 座標
+                const distanceToTop = startY; // 從底部到頂部的距離
+                finalTargetX = startX + normalizedX * (distanceToTop / Math.abs(normalizedY));
+                finalTargetY = 0; // 螢幕頂部
+            }
+
+            // 確保目標位置在遊戲區域內
+            finalTargetX = Math.max(0, Math.min(gameAreaWidth, finalTargetX));
+            finalTargetY = Math.max(0, Math.min(gameAreaHeight, finalTargetY));
+
+            // 調試信息：顯示遊戲區域尺寸和目標位置
+            console.log(`[DEBUG] Game area size: 1400x700 (fixed)`);
+            console.log(`[DEBUG] Click position: (${targetX}, ${targetY})`);
+            console.log(`[DEBUG] Final target: (${finalTargetX}, ${finalTargetY})`);
+
+            socket.emit('fire-bullet', {
+                roomId: gameState.roomId,
+                userId: currentUser.userId,
+                x: startX,
+                y: startY,
+                targetX: finalTargetX,
+                targetY: finalTargetY,
+                gameAreaWidth: 1400,
+                gameAreaHeight: 700
+            });
+        }
+
+        // 找到最近的魚
+        function findNearestFish() {
+            let nearestFish = null;
+            let minDistance = Infinity;
+
+            for (const fishId in gameState.fishes) {
+                const fish = gameState.fishes[fishId];
+                if (fish && fish.x !== undefined && fish.y !== undefined) {
+                    // 計算距離（從遊戲區域底部邊緣中央到魚的距離）
+                    const gameArea = document.getElementById('gameArea');
+                    const centerX = 700;   // 橫向正中間 (1400/2)
+                    const bottomY = 699;   // 最下面邊緣 (700-1)
+
+                    const distance = Math.sqrt(
+                        Math.pow(fish.x - centerX, 2) +
+                        Math.pow(fish.y - bottomY, 2)
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        nearestFish = fish;
+                    }
+                }
+            }
+
+            return nearestFish;
+        }
+
+        // 自動射擊函數
+        function autoShoot() {
+            if (!autoModeEnabled || !gameState.isPlaying || !gameState.roomId) return;
+
+            // 檢查餘額
+            if (currentUser && currentUser.balance <= 0) {
+                console.log('[自動模式] 餘額不足，停止自動射擊');
+                return;
+            }
+
+            const nearestFish = findNearestFish();
+            if (nearestFish) {
+                console.log('[自動模式] 瞄準魚類:', nearestFish.type, '位置:', nearestFish.x, nearestFish.y);
+                fireBulletAt(nearestFish.x, nearestFish.y);
+            }
+        }
+
+        // 切換自動模式
+        function toggleAutoMode() {
+            const checkbox = document.getElementById('autoModeCheckbox');
+            const label = checkbox.parentElement;
+
+            autoModeEnabled = checkbox.checked;
+
+            if (autoModeEnabled) {
+                label.classList.add('active');
+                // 每1.5秒自動射擊一次
+                autoModeInterval = setInterval(autoShoot, 1500);
+                showStatus('🤖 邊緣人模式已啟動！自動瞄準射擊中...', 'info');
+                console.log('[自動模式] 已啟動');
+            } else {
+                label.classList.remove('active');
+                if (autoModeInterval) {
+                    clearInterval(autoModeInterval);
+                    autoModeInterval = null;
+                }
+                showStatus('🤖 邊緣人模式已關閉', 'info');
+                console.log('[自動模式] 已關閉');
+            }
+        }
+
+        // 創建魚元素
+        function createFishElement(fish) {
+            const gameArea = document.getElementById('gameArea');
+            const fishElement = document.createElement('div');
+            fishElement.className = `fish ${fish.type}`;
+            fishElement.id = `fish-${fish.id}`;
+            fishElement.style.left = fish.x + 'px';
+            fishElement.style.top = fish.y + 'px';
+
+            // 根據魚的類型設置不同的表情符號
+            const fishEmojis = {
+                small: '🐠',
+                medium: '🐟',
+                large: '🐡',
+                boss: '🦈'
+            };
+            fishElement.textContent = fishEmojis[fish.type] || '🐟';
+
+            gameArea.appendChild(fishElement);
+        }
+
+        // 更新魚的位置
+        function updateFishPosition(fishId, x, y) {
+            const fishElement = document.getElementById(`fish-${fishId}`);
+            if (fishElement) {
+                fishElement.style.left = x + 'px';
+                fishElement.style.top = y + 'px';
+            }
+        }
+
+        // 移除魚元素
+        function removeFishElement(fishId) {
+            const fishElement = document.getElementById(`fish-${fishId}`);
+            if (fishElement) {
+                fishElement.remove();
+            }
+        }
+
+        // 創建子彈元素
+        function createBulletElement(bullet) {
+            const gameArea = document.getElementById('gameArea');
+            const bulletElement = document.createElement('div');
+            bulletElement.className = 'bullet';
+            bulletElement.id = `bullet-${bullet.id}`;
+
+            // 統一所有子彈都從底部邊緣中央發射
+            const startX = 700;   // 橫向正中間 (1400/2)
+            const startY = 699;   // 最下面邊緣 (700-1)
+
+            bulletElement.style.left = startX + 'px';
+            bulletElement.style.top = startY + 'px';
+
+            // 設置子彈顏色與玩家顏色匹配
+            const playerColor = getPlayerColor(bullet.playerId);
+            bulletElement.style.backgroundColor = playerColor;
+            bulletElement.style.borderColor = playerColor;
+            bulletElement.style.boxShadow = `0 0 8px ${playerColor}`;
+
+            console.log(`[DEBUG] 創建子彈 ${bullet.id}，玩家 ${bullet.playerId}，顏色 ${playerColor}`);
+
+            gameArea.appendChild(bulletElement);
+        }
+
+        // 更新子彈位置
+        function updateBulletPosition(bulletId, x, y) {
+            const bulletElement = document.getElementById(`bullet-${bulletId}`);
+            if (bulletElement) {
+                // 正常更新位置，讓子彈按照服務器計算的軌跡移動
+                bulletElement.style.left = x + 'px';
+                bulletElement.style.top = y + 'px';
+            }
+        }
+
+        // 移除子彈元素
+        function removeBulletElement(bulletId) {
+            const bulletElement = document.getElementById(`bullet-${bulletId}`);
+            if (bulletElement) {
+                bulletElement.remove();
+            }
+        }
+
+        // 顯示爆炸效果
+        function showExplosion(x, y) {
+            const gameArea = document.getElementById('gameArea');
+            const explosion = document.createElement('div');
+            explosion.className = 'explosion';
+            explosion.textContent = '💥';
+            explosion.style.left = x + 'px';
+            explosion.style.top = y + 'px';
+
+            gameArea.appendChild(explosion);
+
+            setTimeout(() => {
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+            }, 500);
+        }
+
+        // 玩家顏色配置
+        const playerColors = [
+            '#f39c12', // 橙色
+            '#e74c3c', // 紅色
+            '#00bfff', // 亮藍色 (Deep Sky Blue)
+            '#2ecc71', // 綠色
+            '#9b59b6', // 紫色
+            '#e67e22', // 深橙色
+            '#1abc9c', // 青色
+            '#34495e'  // 深灰色
+        ];
+
+        // 獲取玩家顏色
+        function getPlayerColor(playerId) {
+            // 為每個玩家分配固定顏色
+            const playerIds = Object.keys(gameState.players).sort();
+            const playerIndex = playerIds.indexOf(playerId);
+            return playerColors[playerIndex % playerColors.length];
+        }
+
+        // 更新玩家列表顯示
+        function updatePlayersDisplay() {
+            const playersList = document.getElementById('playersList');
+            playersList.innerHTML = '<div><strong>房間玩家:</strong></div>';
+
+            console.log('[DEBUG] 更新玩家列表，當前玩家數據:', gameState.players);
+
+            // 顯示當前房間的所有玩家
+            if (gameState.players && Object.keys(gameState.players).length > 0) {
+                for (const playerId in gameState.players) {
+                    const player = gameState.players[playerId];
+                    if (player && player.username) {
+                        const playerDiv = document.createElement('div');
+                        playerDiv.textContent = `${player.username}: ${player.score || 0} 分`;
+
+                        // 設置玩家顏色
+                        const playerColor = getPlayerColor(playerId);
+                        playerDiv.style.color = playerColor;
+
+                        // 當前用戶加粗顯示
+                        if (playerId === currentUser?.userId) {
+                            playerDiv.style.fontWeight = 'bold';
+                        }
+
+                        playersList.appendChild(playerDiv);
+                    }
+                }
+            } else {
+                // 如果沒有其他玩家數據，至少顯示當前用戶
+                if (currentUser) {
+                    const playerDiv = document.createElement('div');
+                    playerDiv.textContent = `${currentUser.username}: ${gameState.score || 0} 分`;
+                    playerDiv.style.color = getPlayerColor(currentUser.userId);
+                    playerDiv.style.fontWeight = 'bold';
+                    playersList.appendChild(playerDiv);
+                }
+            }
+        }
+
+        // 更新遊戲狀態顯示
+        function updateGameStatus() {
+            const inRoom = gameState.roomId !== null;
+            const isPlaying = gameState.isPlaying;
+
+            // 更新按鈕狀態
+            document.getElementById('findRoomBtn').disabled = inRoom;
+            document.getElementById('createRoomBtn').disabled = inRoom;
+            document.getElementById('selectRoomBtn').disabled = inRoom;
+            document.getElementById('startGameBtn').disabled = !inRoom || isPlaying;
+            document.getElementById('leaveRoomBtn').disabled = !inRoom;
+
+            // 更新分數和餘額
+            document.getElementById('playerScore').textContent = gameState.score;
+            // 確保餘額顯示正確，優先使用 currentUser.balance
+            const balanceToShow = currentUser?.balance !== undefined ? currentUser.balance : (gameState.balance || 0);
+            document.getElementById('playerBalance').textContent = balanceToShow;
+        }
+
+        // 更新遊戲區域
+        function updateGameArea() {
+            // 清空現有元素
+            clearGameArea();
+
+            // 重新創建魚群
+            for (const fishId in gameState.fishes) {
+                createFishElement(gameState.fishes[fishId]);
+            }
+
+            // 重新創建子彈
+            for (const bulletId in gameState.bullets) {
+                createBulletElement(gameState.bullets[bulletId]);
+            }
+        }
+
+        // 清空遊戲區域
+        function clearGameArea() {
+            const gameArea = document.getElementById('gameArea');
+            const elementsToRemove = gameArea.querySelectorAll('.fish, .bullet, .explosion');
+            elementsToRemove.forEach(element => element.remove());
+        }
+
+        // 更新UI狀態
+        function updateUI() {
+            const inRoom = !!gameState.roomId;
+            const isPlaying = gameState.isPlaying;
+
+            // 更新房間信息
+            document.getElementById('roomInfo').textContent = inRoom ? `房間: ${gameState.roomId}` : '未加入房間';
+
+            // 更新按鈕狀態
+            document.getElementById('findRoomBtn').disabled = inRoom;
+            document.getElementById('createRoomBtn').disabled = inRoom;
+            document.getElementById('startGameBtn').disabled = !inRoom || isPlaying;
+            document.getElementById('leaveRoomBtn').disabled = !inRoom;
+
+            // 更新分數和餘額
+            document.getElementById('playerScore').textContent = gameState.score;
+            // 確保餘額顯示正確，優先使用 currentUser.balance
+            const balanceToShow = currentUser?.balance !== undefined ? currentUser.balance : (gameState.balance || 0);
+            document.getElementById('playerBalance').textContent = balanceToShow;
+
+            // 更新選擇房間按鈕狀態
+            document.getElementById('selectRoomBtn').disabled = inRoom;
+        }
+
+        // 房間選擇相關函數
+        async function selectRoom() {
+            if (!currentUser) {
+                showStatus('請先登入', 'error');
+                return;
+            }
+
+            // 顯示模態框
+            document.getElementById('roomSelectionModal').classList.remove('hidden');
+
+            // 載入房間列表
+            await loadRoomsList();
+        }
+
+        async function loadRoomsList() {
+            const roomsList = document.getElementById('roomsList');
+            roomsList.innerHTML = '<div class="loading">載入中...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/lobby/rooms`);
+                const data = await response.json();
+
+                if (data.success && data.data.rooms) {
+                    const rooms = data.data.rooms;
+
+                    if (rooms.length === 0) {
+                        roomsList.innerHTML = '<div class="no-rooms">目前沒有可用的房間<br>請創建新房間或稍後再試</div>';
+                        return;
+                    }
+
+                    // 過濾出有空位的房間
+                    const availableRooms = rooms.filter(room => room.currentPlayers < room.maxPlayers);
+
+                    if (availableRooms.length === 0) {
+                        roomsList.innerHTML = '<div class="no-rooms">所有房間都已滿<br>請創建新房間或稍後再試</div>';
+                        return;
+                    }
+
+                    // 生成房間列表 HTML
+                    roomsList.innerHTML = availableRooms.map(room => {
+                        const isFull = room.currentPlayers >= room.maxPlayers;
+                        const statusText = room.status === 'playing' ? '遊戲中' : '等待中';
+                        const statusClass = room.status === 'playing' ? 'playing' : 'waiting';
+
+                        return `
+                            <div class="room-item ${isFull ? 'full' : ''}" onclick="${isFull ? '' : `joinRoomFromSelection('${room.id}')`}">
+                                <div class="room-info">
+                                    <h3>${room.name}</h3>
+                                    <p>房間 ID: ${room.id}</p>
+                                    <p>創建時間: ${new Date(room.createdAt).toLocaleString()}</p>
+                                </div>
+                                <div class="room-status">
+                                    <div class="players-count ${isFull ? 'full' : ''}">${room.currentPlayers}/${room.maxPlayers}</div>
+                                    <div class="room-status-badge ${statusClass}">${statusText}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    roomsList.innerHTML = '<div class="no-rooms">載入房間列表失敗<br>請稍後再試</div>';
+                }
+            } catch (error) {
+                console.error('載入房間列表錯誤:', error);
+                roomsList.innerHTML = '<div class="no-rooms">網路錯誤<br>請檢查連接後重試</div>';
+            }
+        }
+
+        async function joinRoomFromSelection(roomId) {
+            try {
+                // 關閉模態框
+                closeRoomSelection();
+
+                // 加入選中的房間
+                await joinRoom(roomId);
+
+                showStatus(`正在加入房間 ${roomId}...`, 'info');
+            } catch (error) {
+                console.error('加入房間錯誤:', error);
+                showStatus('加入房間失敗', 'error');
+            }
+        }
+
+        function closeRoomSelection() {
+            console.log('[DEBUG] 關閉房間選擇模態框');
+            const modal = document.getElementById('roomSelectionModal');
+            modal.classList.add('hidden');
+            modal.style.display = 'none'; // 強制隱藏
+        }
+
+        // 添加模態框背景點擊關閉功能
+        function setupModalClickHandler() {
+            const modal = document.getElementById('roomSelectionModal');
+            const modalContent = modal.querySelector('.modal-content');
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeRoomSelection();
+                }
+            });
+
+            // 防止模態框內容區域的點擊事件冒泡
+            modalContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // 緊急關閉模態框函數（可在控制台調用）
+        window.forceCloseModal = function () {
+            console.log('[DEBUG] 強制關閉模態框');
+            const modal = document.getElementById('roomSelectionModal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+                modal.style.visibility = 'hidden';
+            }
+        };
+
+        // 強制重置UI狀態函數（可在控制台調用）
+        window.forceResetUI = function () {
+            console.log('[DEBUG] 強制重置UI狀態');
+
+            // 重置用戶狀態
+            currentUser = null;
+            gameState = { isPlaying: false, roomId: null, players: {}, fishes: {}, bullets: {}, score: 0, balance: 0 };
+
+            // 強制顯示登入界面
+            const gameContainer = document.getElementById('gameContainer');
+            const loginForm = document.getElementById('loginForm');
+
+            gameContainer.classList.add('hidden');
+            gameContainer.style.display = 'none !important';
+
+            loginForm.classList.remove('hidden');
+            loginForm.style.display = 'block !important';
+
+            // 關閉模態框
+            forceCloseModal();
+
+            console.log('[DEBUG] UI狀態已重置');
+        };
+
+        async function refreshRoomsList() {
+            await loadRoomsList();
+        }
+
+        // 頁面加載完成後初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            debugLog('頁面載入完成，開始初始化');
+
+            try {
+                // 顯示載入狀態
+                showStatus('正在初始化遊戲...', 'info');
+
+                // 載入 Socket.IO
+                await loadSocketIO();
+                debugLog('Socket.IO 載入成功');
+
+                // 初始化遊戲
+                setupGameAreaClick();
+                setupModalClickHandler();
+                updateUI();
+
+                // 確保正確的初始UI狀態
+                const modal = document.getElementById('roomSelectionModal');
+                const gameContainer = document.getElementById('gameContainer');
+                const loginForm = document.getElementById('loginForm');
+
+                // 確保模態框隱藏
+                modal.classList.add('hidden');
+
+                // 根據用戶登入狀態設置UI
+                if (!currentUser) {
+                    // 未登入：顯示登入表單，隱藏遊戲容器
+                    gameContainer.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                } else {
+                    // 已登入：顯示遊戲容器，隱藏登入表單
+                    loginForm.classList.add('hidden');
+                    gameContainer.classList.remove('hidden');
+                }
+
+                console.log('[DEBUG] 初始化完成，UI狀態已重置');
+                console.log('[DEBUG] 模態框狀態:', modal.classList.contains('hidden'));
+                console.log('[DEBUG] 登入表單狀態:', !loginForm.classList.contains('hidden'));
+
+                // 隱藏載入狀態
+                showStatus('遊戲初始化完成！請註冊或登入開始遊戲', 'success');
+                debugLog('遊戲初始化完成');
+
+                // 測試按鈕事件綁定
+                const findRoomBtn = document.getElementById('findRoomBtn');
+                const selectRoomBtn = document.getElementById('selectRoomBtn');
+                const createRoomBtn = document.getElementById('createRoomBtn');
+                const startGameBtn = document.getElementById('startGameBtn');
+
+                debugLog('按鈕元素:', {
+                    findRoomBtn: !!findRoomBtn,
+                    selectRoomBtn: !!selectRoomBtn,
+                    createRoomBtn: !!createRoomBtn,
+                    startGameBtn: !!startGameBtn
+                });
+
+                // 手動綁定事件（以防萬一）
+                if (findRoomBtn) {
+                    findRoomBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        debugLog('尋找房間按鈕點擊事件觸發');
+                        findRoom();
+                    });
+                }
+
+                if (selectRoomBtn) {
+                    selectRoomBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        debugLog('選擇房間按鈕點擊事件觸發');
+                        selectRoom();
+                    });
+                }
+
+                if (createRoomBtn) {
+                    createRoomBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        debugLog('創建房間按鈕點擊事件觸發');
+                        createRoom();
+                    });
+                }
+
+                if (startGameBtn) {
+                    startGameBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        debugLog('開始遊戲按鈕點擊事件觸發');
+                        startGame();
+                    });
+                }
+
+                // 綁定離開房間按鈕事件
+                const leaveRoomBtn = document.getElementById('leaveRoomBtn');
+                if (leaveRoomBtn) {
+                    leaveRoomBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        debugLog('離開房間按鈕點擊事件觸發');
+                        leaveRoom();
+                    });
+                }
+
+                // 綁定邊緣人模式勾選框事件
+                const autoModeCheckbox = document.getElementById('autoModeCheckbox');
+                if (autoModeCheckbox) {
+                    autoModeCheckbox.addEventListener('change', toggleAutoMode);
+                    debugLog('邊緣人模式勾選框事件已綁定');
+                }
+
+            } catch (error) {
+                console.error('初始化失敗:', error);
+                showStatus(`遊戲初始化失敗: ${error.message}`, 'error');
+
+                // 即使 Socket.IO 載入失敗，也要讓基本功能可用
+                try {
+                    setupGameAreaClick();
+                    updateUI();
+                    showStatus('部分功能可能不可用，請重新整理頁面', 'warning');
+                } catch (fallbackError) {
+                    console.error('備用初始化也失敗:', fallbackError);
+                    showStatus('遊戲無法啟動，請檢查網路連接', 'error');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

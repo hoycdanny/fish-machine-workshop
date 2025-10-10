@@ -1,0 +1,83 @@
+services:
+  # Redis 數據庫服務 (內存存儲，不持久化)
+  redis:
+    image: redis:7-alpine
+    container_name: fish-game-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save "" --appendonly no
+    networks:
+      - fish-game-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # 遊戲客戶端服務
+  client-service:
+    build:
+      context: services/client-service
+      dockerfile: Dockerfile
+    container_name: fish-game-client
+    ports:
+      - "${CLIENT_SERVICE_PORT}:${CLIENT_SERVICE_PORT}"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - SERVICE_PORT=${CLIENT_SERVICE_PORT}
+    networks:
+      - fish-game-network
+    restart: unless-stopped
+
+  # 遊戲會話服務
+  game-session-service:
+    build:
+      context: services/game-session-service
+      dockerfile: Dockerfile
+    container_name: fish-game-session
+    ports:
+      - "${GAME_SESSION_SERVICE_PORT}:${GAME_SESSION_SERVICE_PORT}"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - SERVICE_PORT=${GAME_SESSION_SERVICE_PORT}
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    networks:
+      - fish-game-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 遊戲伺服器服務
+  game-server-service:
+    build:
+      context: services/game-server-service
+      dockerfile: Dockerfile
+    container_name: fish-game-server
+    ports:
+      - "${GAME_SERVER_SERVICE_PORT}:${GAME_SERVER_SERVICE_PORT}"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - SERVICE_PORT=${GAME_SERVER_SERVICE_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - GAME_ROOM_MAX_PLAYERS=${GAME_ROOM_MAX_PLAYERS}
+      - GAME_FISH_SPAWN_INTERVAL=${GAME_FISH_SPAWN_INTERVAL}
+      - FISH_HIT_RATE_SMALL=${FISH_HIT_RATE_SMALL}
+      - FISH_HIT_RATE_MEDIUM=${FISH_HIT_RATE_MEDIUM}
+      - FISH_HIT_RATE_LARGE=${FISH_HIT_RATE_LARGE}
+      - FISH_HIT_RATE_BOSS=${FISH_HIT_RATE_BOSS}
+    networks:
+      - fish-game-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+networks:
+  fish-game-network:
+    driver: bridge
+    name: fish-game-network

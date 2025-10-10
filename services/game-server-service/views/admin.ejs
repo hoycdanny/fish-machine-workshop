@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .stat-label {
+            font-weight: 500;
+            color: #666;
+        }
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2196F3;
+        }
+        .config-controls {
+            margin-top: 15px;
+        }
+        .config-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .config-item label {
+            min-width: 120px;
+            font-weight: 500;
+            color: #666;
+        }
+        .config-item input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        .config-value {
+            min-width: 80px;
+            font-weight: bold;
+            color: #333;
+        }
+        .config-item button {
+            padding: 5px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .config-item button:hover {
+            background: #1976D2;
+        }
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .last-updated {
+            font-size: 12px;
+            color: #999;
+            text-align: right;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 <%= title %></h1>
+            <span class="status">運行中</span>
+            <div class="last-updated" id="lastUpdated">最後更新: <%= new Date().toLocaleString('zh-TW') %></div>
+        </div>
+        
+        <div class="section">
+            <h3>📊 服務狀態</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">服務名稱:</span>
+                    <span class="stat-value"><%= service %></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">端口:</span>
+                    <span class="stat-value">8083</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">WebSocket 連接數:</span>
+                    <span class="stat-value" id="connections"><%= connections %></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>🐟 遊戲狀態</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">活躍遊戲房間:</span>
+                    <span class="stat-value" id="activeRooms"><%= stats.activeRooms %></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">魚群數量:</span>
+                    <span class="stat-value" id="fishCount"><%= stats.fishCount %></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">子彈數量:</span>
+                    <span class="stat-value" id="bulletCount"><%= stats.bulletCount %></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>💥 碰撞檢測</h3>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-label">今日碰撞次數:</span>
+                    <span class="stat-value" id="todayCollisions"><%= stats.todayCollisions %></span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">命中率:</span>
+                    <span class="stat-value" id="hitRateStats"><%= stats.hitRate %>%</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">總派彩:</span>
+                    <span class="stat-value" id="totalPayout">$<%= stats.totalPayout %></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>⚙️ 遊戲配置</h3>
+            <div class="config-controls">
+                <!-- 魚群生成間隔 -->
+                <div class="config-item">
+                    <label for="fishSpawnInterval">魚群生成間隔:</label>
+                    <input type="range" id="fishSpawnInterval" 
+                           min="100" max="5000" step="100" value="<%= config.fishSpawnInterval %>">
+                    <span class="config-value" id="fishSpawnIntervalValue"><%= (config.fishSpawnInterval / 1000).toFixed(1) %>秒</span>
+                    <button onclick="updateConfig('fishSpawnInterval')">應用</button>
+                </div>
+                
+                <!-- 子彈速度 -->
+                <div class="config-item">
+                    <label for="bulletSpeed">子彈速度:</label>
+                    <input type="range" id="bulletSpeed" 
+                           min="300" max="800" step="10" value="<%= config.bulletSpeed %>">
+                    <span class="config-value" id="bulletSpeedValue"><%= config.bulletSpeed %>px/s</span>
+                    <button onclick="updateConfig('bulletSpeed')">應用</button>
+                </div>
+                
+                <!-- 命中率 -->
+                <div class="config-item">
+                    <label for="hitRate">命中率:</label>
+                    <input type="range" id="hitRate" 
+                           min="0.1" max="1.0" step="0.05" value="<%= config.hitRate %>">
+                    <span class="config-value" id="hitRateValue"><%= (config.hitRate * 100).toFixed(0) %>%</span>
+                    <button onclick="updateConfig('hitRate')">應用</button>
+                </div>
+            </div>
+            
+            <!-- 配置狀態提示 -->
+            <div id="configStatus" class="status-message"></div>
+        </div>
+        
+        <div class="section">
+            <h3>🔗 API 端點</h3>
+            <ul>
+                <li>GET /admin/api/stats - 即時統計數據</li>
+                <li>POST /admin/api/config/update - 配置更新</li>
+                <li>POST /api/v1/game/start - 開始遊戲</li>
+                <li>POST /api/v1/game/shoot - 發射子彈</li>
+                <li>POST /api/v1/collision/detect - 碰撞檢測</li>
+            </ul>
+        </div>
+        
+        <div class="section">
+            <h3>🌐 WebSocket 事件</h3>
+            <ul>
+                <li>join-room - 加入房間</li>
+                <li>fire-bullet - 發射子彈</li>
+                <li>game-state-update - 遊戲狀態更新</li>
+                <li>config-update - 配置更新通知</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 管理面板即時數據更新
+        const AdminDashboard = {
+            // 每秒更新統計數據
+            updateInterval: 1000,
+            
+            // 統計數據結構
+            stats: {
+                activeRooms: 0,
+                fishCount: 0,
+                bulletCount: 0,
+                todayCollisions: 0,
+                hitRate: 0,
+                totalPayout: 0
+            },
+            
+            // 配置數據結構
+            config: {
+                fishSpawnInterval: <%= config.fishSpawnInterval %>,
+                bulletSpeed: <%= config.bulletSpeed %>,
+                hitRate: <%= config.hitRate %>
+            },
+            
+            // 初始化即時更新
+            init() {
+                this.startStatsUpdate();
+                this.bindConfigControls();
+                console.log('Admin Dashboard initialized');
+            },
+            
+            // 開始統計數據更新
+            startStatsUpdate() {
+                setInterval(() => {
+                    this.fetchStats();
+                }, this.updateInterval);
+            },
+            
+            // 獲取即時統計數據
+            async fetchStats() {
+                try {
+                    const response = await fetch('/admin/api/stats');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.updateStatsDisplay(result.data);
+                        this.updateLastUpdatedTime();
+                    }
+                } catch (error) {
+                    console.error('Error fetching stats:', error);
+                }
+            },
+            
+            // 更新統計數據顯示
+            updateStatsDisplay(data) {
+                document.getElementById('activeRooms').textContent = data.activeRooms;
+                document.getElementById('fishCount').textContent = data.fishCount;
+                document.getElementById('bulletCount').textContent = data.bulletCount;
+                document.getElementById('todayCollisions').textContent = data.todayCollisions;
+                document.getElementById('hitRateStats').textContent = data.hitRate + '%';
+                document.getElementById('totalPayout').textContent = '$' + data.totalPayout;
+            },
+            
+            // 更新最後更新時間
+            updateLastUpdatedTime() {
+                const now = new Date().toLocaleString('zh-TW');
+                document.getElementById('lastUpdated').textContent = '最後更新: ' + now;
+            },
+            
+            // 綁定配置控制項事件
+            bindConfigControls() {
+                // 魚群生成間隔滑桿
+                const fishSpawnInterval = document.getElementById('fishSpawnInterval');
+                fishSpawnInterval.addEventListener('input', (e) => {
+                    const value = (e.target.value / 1000).toFixed(1);
+                    document.getElementById('fishSpawnIntervalValue').textContent = value + '秒';
+                });
+                
+                // 子彈速度滑桿
+                const bulletSpeed = document.getElementById('bulletSpeed');
+                bulletSpeed.addEventListener('input', (e) => {
+                    document.getElementById('bulletSpeedValue').textContent = e.target.value + 'px/s';
+                });
+                
+                // 命中率滑桿
+                const hitRate = document.getElementById('hitRate');
+                hitRate.addEventListener('input', (e) => {
+                    const value = (e.target.value * 100).toFixed(0);
+                    document.getElementById('hitRateValue').textContent = value + '%';
+                });
+            },
+            
+            // 顯示狀態訊息
+            showStatusMessage(message, type) {
+                const statusDiv = document.getElementById('configStatus');
+                statusDiv.textContent = message;
+                statusDiv.className = 'status-message ' + type;
+                statusDiv.style.display = 'block';
+                
+                // 3秒後隱藏訊息
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+            }
+        };
+        
+        // 更新配置
+        async function updateConfig(configKey) {
+            try {
+                const element = document.getElementById(configKey);
+                if (!element) {
+                    AdminDashboard.showStatusMessage(`找不到配置元素: ${configKey}`, 'error');
+                    return;
+                }
+                
+                let value;
+                
+                // 根據配置類型處理數值
+                if (configKey === 'fishSpawnInterval' || configKey === 'bulletSpeed') {
+                    value = parseInt(element.value);
+                    if (isNaN(value)) {
+                        AdminDashboard.showStatusMessage(`無效的數值: ${element.value}`, 'error');
+                        return;
+                    }
+                } else if (configKey === 'hitRate') {
+                    value = parseFloat(element.value);
+                    if (isNaN(value)) {
+                        AdminDashboard.showStatusMessage(`無效的數值: ${element.value}`, 'error');
+                        return;
+                    }
+                } else {
+                    value = parseFloat(element.value);
+                    if (isNaN(value)) {
+                        AdminDashboard.showStatusMessage(`無效的數值: ${element.value}`, 'error');
+                        return;
+                    }
+                }
+                
+                console.log(`Updating ${configKey} to ${value} (type: ${typeof value})`);
+                
+                const response = await fetch('/admin/api/config/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [configKey]: value })
+                });
+                
+                const result = await response.json();
+                console.log('Update result:', result);
+                
+                if (result.success && result.results[configKey] && result.results[configKey].success) {
+                    AdminDashboard.showStatusMessage(`${configKey} 已更新為 ${value}`, 'success');
+                } else {
+                    const error = result.results && result.results[configKey] ? result.results[configKey].error : result.message || '未知錯誤';
+                    AdminDashboard.showStatusMessage(`配置更新失敗: ${error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error updating config:', error);
+                AdminDashboard.showStatusMessage('配置更新失敗: 網路錯誤', 'error');
+            }
+        }
+        
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            AdminDashboard.init();
+        });
+    </script>
+</body>
+</html>

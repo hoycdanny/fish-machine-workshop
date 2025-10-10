@@ -1,0 +1,21 @@
+{
+  "name": "game-session-service",
+  "version": "1.0.0",
+  "description": "遊戲會話服務 - 整合用戶管理、錢包、大廳、配桌功能",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ejs": "^3.1.9"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["game", "session", "microservice"],
+  "author": "Fish Game Team",
+  "license": "MIT"
+}

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.8;
+        }
+        .room-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .room-table th, .room-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .room-table th {
+            background-color: #f2f2f2;
+        }
+        .room-controls {
+            margin-bottom: 15px;
+        }
+        .status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 <%= title %></h1>
+            <span class="status">運行中</span>
+        </div>
+        
+        <div class="section">
+            <h3>📊 服務狀態</h3>
+            <p>服務名稱: <%= service %></p>
+            <p>啟動時間: <%= new Date().toLocaleString('zh-TW') %></p>
+            <p>端口: 8082</p>
+        </div>
+        
+        <div class="section">
+            <h3>👥 用戶管理</h3>
+            <div class="status-message" id="userStatusMessage"></div>
+            <div class="room-controls">
+                <button class="btn btn-success" onclick="refreshUsers()">刷新用戶</button>
+                <button class="btn btn-danger" onclick="clearAllUsers()">清空所有用戶</button>
+            </div>
+            
+            <table class="room-table" id="userTable">
+                <thead>
+                    <tr>
+                        <th>用戶ID</th>
+                        <th>用戶名</th>
+                        <th>餘額</th>
+                        <th>註冊時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <tr>
+                        <td colspan="5" style="text-align: center;">載入中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h3>💰 錢包管理</h3>
+            <p>總餘額: $<span id="totalBalance">0.00</span></p>
+            <div class="room-controls">
+                <button class="btn btn-success" onclick="refreshWalletData()">刷新錢包數據</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h3>🏠 房間管理</h3>
+            <div class="status-message" id="statusMessage"></div>
+            <div class="room-controls">
+                <button class="btn btn-success" onclick="refreshRooms()">刷新數據</button>
+                <button class="btn btn-danger" onclick="clearAllRooms()">關閉所有房間</button>
+            </div>
+            
+            <table class="room-table" id="roomTable">
+                <thead>
+                    <tr>
+                        <th>房間ID</th>
+                        <th>房間名稱</th>
+                        <th>玩家數</th>
+                        <th>狀態</th>
+                        <th>創建時間</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="roomTableBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center;">載入中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h3>🔗 API 端點</h3>
+            <ul>
+                <li>POST /api/v1/users/register - 用戶註冊</li>
+                <li>POST /api/v1/users/login - 用戶登入</li>
+                <li>GET /api/v1/wallet/balance/:userId - 查詢餘額</li>
+                <li>GET /api/v1/lobby/rooms - 房間列表</li>
+                <li>POST /api/v1/lobby/rooms/create - 創建房間</li>
+                <li>DELETE /api/v1/lobby/rooms/:roomId - 刪除房間</li>
+                <li>DELETE /api/v1/lobby/rooms - 清空所有房間</li>
+                <li>POST /api/v1/matching/find-room - 智能配桌</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // 顯示狀態訊息
+        function showMessage(message, type = 'success') {
+            const messageDiv = document.getElementById('statusMessage');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 刷新房間列表
+        async function refreshRooms() {
+            try {
+                const response = await fetch('/api/v1/lobby/rooms');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateRoomTable(data.data.rooms);
+                    showMessage('房間數據已刷新');
+                } else {
+                    showMessage('刷新失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 更新房間表格
+        function updateRoomTable(rooms) {
+            const tbody = document.getElementById('roomTableBody');
+            
+            if (rooms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">暫無房間</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = rooms.map(room => `
+                <tr>
+                    <td>${room.id}</td>
+                    <td>${room.name}</td>
+                    <td>${room.currentPlayers}/${room.maxPlayers}</td>
+                    <td>${room.status}</td>
+                    <td>${new Date(room.createdAt).toLocaleString('zh-TW')}</td>
+                    <td>
+                        <button class="btn btn-danger" onclick="deleteRoom('${room.id}')">關閉</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        // 刪除單個房間
+        async function deleteRoom(roomId) {
+            if (!confirm(`確定要關閉房間 ${roomId} 嗎？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/delete-room', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ roomId: roomId })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(`房間 ${roomId} 已關閉`);
+                    refreshRooms();
+                } else {
+                    showMessage('關閉失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 清空所有房間
+        async function clearAllRooms() {
+            if (!confirm('確定要關閉所有房間嗎？此操作不可撤銷！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/clear-rooms', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message);
+                    refreshRooms();
+                } else {
+                    showMessage('清空失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 用戶管理功能
+        function showUserMessage(message, type = 'success') {
+            const messageDiv = document.getElementById('userStatusMessage');
+            messageDiv.className = `status-message status-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+        
+        // 刷新用戶列表
+        async function refreshUsers() {
+            try {
+                const response = await fetch('/admin/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateUserTable(data.data.users);
+                    showUserMessage('用戶數據已刷新');
+                } else {
+                    showUserMessage('刷新失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showUserMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 更新用戶表格
+        function updateUserTable(users) {
+            const tbody = document.getElementById('userTableBody');
+            
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">暫無用戶</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.userId}</td>
+                    <td>${user.username}</td>
+                    <td>$${user.balance.toFixed(2)}</td>
+                    <td>${new Date(user.createdAt).toLocaleString('zh-TW')}</td>
+                    <td>
+                        <button class="btn btn-primary" onclick="changePassword('${user.username}')">改密碼</button>
+                        <button class="btn btn-primary" onclick="adjustBalance('${user.username}', ${user.balance})">調餘額</button>
+                        <button class="btn btn-danger" onclick="deleteUser('${user.username}')">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // 同時更新錢包統計數據
+            updateWalletStats(users);
+        }
+        
+        // 更新錢包統計數據
+        function updateWalletStats(users) {
+            // 計算總餘額
+            const totalBalance = users.reduce((sum, user) => sum + user.balance, 0);
+            document.getElementById('totalBalance').textContent = totalBalance.toFixed(2);
+        }
+        
+        // 刷新錢包數據
+        async function refreshWalletData() {
+            try {
+                const response = await fetch('/admin/users');
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateWalletStats(data.data.users);
+                    showMessage('錢包數據已刷新');
+                } else {
+                    showMessage('刷新失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 刪除用戶
+        async function deleteUser(username) {
+            if (!confirm(`確定要刪除用戶 ${username} 嗎？`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/delete-user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showUserMessage(`用戶 ${username} 已刪除`);
+                    refreshUsers();
+                } else {
+                    showUserMessage('刪除失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showUserMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 變更密碼
+        async function changePassword(username) {
+            const newPassword = prompt(`請輸入用戶 ${username} 的新密碼:`);
+            if (!newPassword) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username, newPassword: newPassword })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showUserMessage(`用戶 ${username} 密碼已變更`);
+                } else {
+                    showUserMessage('密碼變更失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showUserMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 調整餘額
+        async function adjustBalance(username, currentBalance) {
+            const newBalance = prompt(`請輸入用戶 ${username} 的新餘額 (當前: $${currentBalance.toFixed(2)}):`);
+            if (newBalance === null) {
+                return;
+            }
+            
+            const balance = parseFloat(newBalance);
+            if (isNaN(balance)) {
+                showUserMessage('請輸入有效的數字', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/adjust-balance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: username, newBalance: balance })
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showUserMessage(`用戶 ${username} 餘額已調整為 $${balance.toFixed(2)}`);
+                    refreshUsers();
+                } else {
+                    showUserMessage('餘額調整失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showUserMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 清空所有用戶
+        async function clearAllUsers() {
+            if (!confirm('確定要清空所有用戶嗎？此操作不可撤銷！')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/clear-users', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showUserMessage(data.message);
+                    refreshUsers();
+                } else {
+                    showUserMessage('清空失敗: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showUserMessage('網路錯誤: ' + error.message, 'error');
+            }
+        }
+        
+        // 頁面載入時自動刷新房間列表和用戶列表
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshRooms();
+            refreshUsers();
+            refreshWalletData();
+            
+            // 每30秒自動刷新一次
+            setInterval(() => {
+                refreshRooms();
+                refreshUsers();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
