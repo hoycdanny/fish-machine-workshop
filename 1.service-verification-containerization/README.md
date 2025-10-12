@@ -145,6 +145,32 @@ curl -X POST http://localhost:8082/api/v1/lobby/rooms/create \
 | 🎯 會話管理 | http://your-ip:8082/admin | 用戶和房間管理 |
 | 📊 遊戲監控 | http://your-ip:8083/admin | 遊戲統計和配置 |
 
+## 🎮 遊戲介面展示
+
+### 用戶註冊和登入
+
+**遊戲登入介面**
+![遊戲登入](image/1.game-login.PNG)
+
+**用戶註冊介面**
+![用戶註冊](image/2.game-register.PNG)
+
+### 遊戲主界面
+
+**遊戲儀表板**
+![遊戲儀表板](image/3.game-dashboard.PNG)
+
+**遊戲進行中**
+![遊戲進行中](image/4.play-game.PNG)
+
+### 服務管理介面
+
+**會話服務管理**
+![會話服務](image/1.session-server.PNG)
+
+**遊戲服務監控**
+![遊戲服務](image/1.game-server.PNG)
+
 ## 🚢 推送到 ECR (準備 EKS 部署)
 
 ### 驗證服務正常後推送映像
@@ -172,6 +198,9 @@ chmod +x build-and-push.sh
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest`
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session:latest`
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server:latest`
+
+**ECR 倉庫管理介面**
+![ECR 倉庫](image/1.ecr-repo.PNG)
 
 ## 🚢 EKS 遷移指南
 

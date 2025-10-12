@@ -1,0 +1,67 @@
+# ALB-1: 靜態資源服務
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: client-ingress
+  namespace: fish-game-system
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/group.name: fish-game-static
+spec:
+  rules:
+  - http:
+      paths:
+      # 客戶端服務 - 靜態資源和管理界面
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: client-service
+            port:
+              number: 8081
+      - path: /admin
+        pathType: Prefix
+        backend:
+          service:
+            name: client-service
+            port:
+              number: 8081
+
+---
+# ALB-2: API 服務
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-ingress
+  namespace: fish-game-system
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/group.name: fish-game-api
+spec:
+  rules:
+  - http:
+      paths:
+      # 遊戲會話服務 - API 端點
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: game-session-service
+            port:
+              number: 8082
+      # 遊戲伺服器服務 - 遊戲 API
+      - path: /game
+        pathType: Prefix
+        backend:
+          service:
+            name: game-server-service
+            port:
+              number: 8083

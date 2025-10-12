@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: game-session-service
+  namespace: fish-game-system
+  labels:
+    app: game-session-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: game-session-service
+  template:
+    metadata:
+      labels:
+        app: game-session-service
+    spec:
+      containers:
+      - name: game-session-service
+        # 注意：需要替換為你的 ECR 映像 URI
+        image: 946430773461.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: fish-game-config
+        env:
+        - name: SERVICE_PORT
+          value: "8082"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 5

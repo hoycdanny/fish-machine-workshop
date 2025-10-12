@@ -53,6 +53,9 @@ build/
 test-results/
 coverage/
 
+# Kiro IDE 配置目錄
+.kiro/
+
 # 其他
 *.tgz
 *.tar.gz
