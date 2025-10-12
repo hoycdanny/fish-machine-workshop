@@ -145,6 +145,34 @@ curl -X POST http://localhost:8082/api/v1/lobby/rooms/create \
 | 🎯 會話管理 | http://your-ip:8082/admin | 用戶和房間管理 |
 | 📊 遊戲監控 | http://your-ip:8083/admin | 遊戲統計和配置 |
 
+## 🚢 推送到 ECR (準備 EKS 部署)
+
+### 驗證服務正常後推送映像
+```bash
+# 1. 確保 Docker Compose 服務運行正常
+docker-compose ps
+curl http://localhost:8081/health
+
+# 2. 推送映像到 ECR
+chmod +x build-and-push.sh
+./build-and-push.sh
+
+# 3. 使用特定標籤
+./build-and-push.sh v1.0.0
+```
+
+### ECR 推送流程
+1. **自動創建 ECR 倉庫**：fish-game-client, fish-game-session, fish-game-server
+2. **構建映像**：使用現有 Dockerfile
+3. **推送到 ECR**：標記並推送映像
+4. **驗證推送**：確認映像存在於 ECR
+
+### 推送完成後
+映像將可用於 EKS 部署：
+- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest`
+- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session:latest`
+- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server:latest`
+
 ## 🚢 EKS 遷移指南
 
 ### 無需修改代碼，只需設定環境變數：
