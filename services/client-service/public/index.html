@@ -5,6 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🐟 多人捕魚機遊戲</title>
+    <script>
+        // 遊戲配置 - 可由後端注入或使用默認值
+        window.GAME_CONFIG = {
+            API_BASE: '{{API_BASE}}' !== '{{API_BASE}}' ? '{{API_BASE}}' : 'http://localhost:8082',
+            GAME_SERVER: '{{GAME_SERVER}}' !== '{{GAME_SERVER}}' ? '{{GAME_SERVER}}' : 'http://localhost:8083'
+        };
+    </script>
     <style>
         * {
             margin: 0;
@@ -683,7 +690,7 @@
                 }
 
                 const script = document.createElement('script');
-                script.src = 'http://localhost:8083/socket.io/socket.io.js';
+                script.src = `${window.GAME_CONFIG?.GAME_SERVER || 'http://localhost:8083'}/socket.io/socket.io.js`;
 
                 // 設置超時
                 const timeout = setTimeout(() => {
@@ -725,9 +732,9 @@
         let autoModeEnabled = false;
         let autoModeInterval = null;
 
-        // API 基礎 URL
-        const API_BASE = 'http://localhost:8082';
-        const GAME_SERVER = 'http://localhost:8083';
+        // API 基礎 URL - 從環境變數或當前域名獲取
+        const API_BASE = window.GAME_CONFIG?.API_BASE || 'http://localhost:8082';
+        const GAME_SERVER = window.GAME_CONFIG?.GAME_SERVER || 'http://localhost:8083';
 
         // 調試模式
         const DEBUG = true;
@@ -1357,16 +1364,9 @@
 
             let finalTargetX, finalTargetY;
 
-            // 如果射擊方向太水平（normalizedY 接近 0），直接使用點擊位置
-            if (Math.abs(normalizedY) < 0.1) {
-                finalTargetX = targetX;
-                finalTargetY = targetY;
-            } else {
-                // 計算到達 y=0 時的 x 座標
-                const distanceToTop = startY; // 從底部到頂部的距離
-                finalTargetX = startX + normalizedX * (distanceToTop / Math.abs(normalizedY));
-                finalTargetY = 0; // 螢幕頂部
-            }
+            // 直接使用點擊位置作為目標，不限制射擊角度
+            finalTargetX = targetX;
+            finalTargetY = targetY;
 
             // 確保目標位置在遊戲區域內
             finalTargetX = Math.max(0, Math.min(gameAreaWidth, finalTargetX));

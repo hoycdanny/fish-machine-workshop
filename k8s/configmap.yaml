@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fish-game-config
+  namespace: fish-game
+data:
+  # Redis 配置
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # 服務間通信配置
+  GAME_SESSION_SERVICE_HOST: "game-session-service"
+  GAME_SESSION_SERVICE_PORT: "8082"
+  GAME_SERVER_SERVICE_HOST: "game-server-service"
+  GAME_SERVER_SERVICE_PORT: "8083"
+  CLIENT_SERVICE_PORT: "8080"
+  
+  # 遊戲配置
+  GAME_ROOM_MAX_PLAYERS: "4"
+  GAME_FISH_SPAWN_INTERVAL: "2000"
+  FISH_HIT_RATE_SMALL: "0.8"
+  FISH_HIT_RATE_MEDIUM: "0.6"
+  FISH_HIT_RATE_LARGE: "0.4"
+  FISH_HIT_RATE_BOSS: "0.2"
+  
+  # 環境配置
+  NODE_ENV: "production"

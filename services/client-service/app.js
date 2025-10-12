@@ -20,9 +20,25 @@ app.get('/health', (req, res) => {
   });
 });
 
-// 根路徑提供遊戲客戶端
+// 根路徑提供遊戲客戶端 - 支持配置注入
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  const fs = require('fs');
+  
+  try {
+    let html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+    
+    // 注入環境變數
+    const API_BASE = process.env.API_BASE || `http://${process.env.GAME_SESSION_SERVICE_HOST || 'localhost'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}`;
+    const GAME_SERVER = process.env.GAME_SERVER || `http://${process.env.GAME_SERVER_SERVICE_HOST || 'localhost'}:${process.env.GAME_SERVER_SERVICE_PORT || 8083}`;
+    
+    html = html.replace('{{API_BASE}}', API_BASE);
+    html = html.replace('{{GAME_SERVER}}', GAME_SERVER);
+    
+    res.send(html);
+  } catch (error) {
+    console.error('Error serving index.html:', error);
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  }
 });
 
 // 404 處理

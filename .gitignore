@@ -56,3 +56,6 @@ coverage/
 # 其他
 *.tgz
 *.tar.gz
+
+# 排除文檔
+Runbook_v1.1.docx.pdf

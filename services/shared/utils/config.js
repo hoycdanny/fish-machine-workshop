@@ -59,9 +59,9 @@ class Config {
 
       // 服務間通訊配置
       services: {
-        userWallet: process.env.USER_WALLET_SERVICE_URL || 'http://user-wallet-service:8081',
-        gameSession: process.env.GAME_SESSION_SERVICE_URL || 'http://game-session-service:8082',
-        gameServer: process.env.GAME_SERVER_SERVICE_URL || 'http://game-server-service:8083'
+        userWallet: process.env.USER_WALLET_SERVICE_URL || `http://${process.env.USER_WALLET_SERVICE_HOST || 'user-wallet-service'}:${process.env.USER_WALLET_SERVICE_PORT || 8081}`,
+        gameSession: process.env.GAME_SESSION_SERVICE_URL || `http://${process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}`,
+        gameServer: process.env.GAME_SERVER_SERVICE_URL || `http://${process.env.GAME_SERVER_SERVICE_HOST || 'game-server-service'}:${process.env.GAME_SERVER_SERVICE_PORT || 8083}`
       }
     };
 

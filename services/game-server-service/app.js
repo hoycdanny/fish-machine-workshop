@@ -232,7 +232,7 @@ let configManager;
 // 同步餘額到用戶管理系統
 async function syncBalanceToUserSystem(userId, newBalance) {
   try {
-    const response = await axios.post('http://game-session-service:8082/api/v1/wallet/update-balance', {
+    const response = await axios.post(`http://${process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}/api/v1/wallet/update-balance`, {
       userId: userId,
       balance: newBalance
     });
@@ -245,7 +245,7 @@ async function syncBalanceToUserSystem(userId, newBalance) {
 // 同步房間狀態到遊戲會話服務
 async function syncRoomStatusToSessionService(roomId, status) {
   try {
-    const response = await axios.post('http://game-session-service:8082/api/v1/lobby/rooms/update-status', {
+    const response = await axios.post(`http://${process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}/api/v1/lobby/rooms/update-status`, {
       roomId: roomId,
       status: status
     });

@@ -26,6 +26,10 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - SERVICE_PORT=${CLIENT_SERVICE_PORT}
+      - GAME_SESSION_SERVICE_HOST=game-session-service
+      - GAME_SESSION_SERVICE_PORT=${GAME_SESSION_SERVICE_PORT}
+      - GAME_SERVER_SERVICE_HOST=game-server-service
+      - GAME_SERVER_SERVICE_PORT=${GAME_SERVER_SERVICE_PORT}
     networks:
       - fish-game-network
     restart: unless-stopped
@@ -64,6 +68,8 @@ services:
       - SERVICE_PORT=${GAME_SERVER_SERVICE_PORT}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
+      - GAME_SESSION_SERVICE_HOST=game-session-service
+      - GAME_SESSION_SERVICE_PORT=${GAME_SESSION_SERVICE_PORT}
       - GAME_ROOM_MAX_PLAYERS=${GAME_ROOM_MAX_PLAYERS}
       - GAME_FISH_SPAWN_INTERVAL=${GAME_FISH_SPAWN_INTERVAL}
       - FISH_HIT_RATE_SMALL=${FISH_HIT_RATE_SMALL}
