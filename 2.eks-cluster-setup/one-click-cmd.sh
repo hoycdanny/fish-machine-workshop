@@ -3,9 +3,11 @@ set -e
 
 echo "🚀 開始 EKS 集群部署..."
 
-# 檢查並設定區域
+# 檢查並設定區域和集群名稱
 export AWS_REGION=${AWS_REGION:-ap-northeast-2}
+export CLUSTER_NAME=${CLUSTER_NAME:-"myeks-$(date +%s)"}
 echo "📍 使用區域: $AWS_REGION"
+echo "🏷️  集群名稱: $CLUSTER_NAME"
 
 # 檢查 AWS 身份
 echo "🔐 檢查 AWS 身份..."
@@ -29,14 +31,14 @@ eksctl version
 
 # 檢查是否已有集群
 echo "🔍 檢查現有集群..."
-if aws eks describe-cluster --name myeks --region $AWS_REGION &>/dev/null; then
-    echo "⚠️  集群 'myeks' 已存在，跳過創建步驟"
+if aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION &>/dev/null; then
+    echo "⚠️  集群 '$CLUSTER_NAME' 已存在，跳過創建步驟"
     # 更新 kubeconfig
-    aws eks update-kubeconfig --region $AWS_REGION --name myeks
+    aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 else
     echo "🏗️  創建 EKS 集群 (預計需要 15-20 分鐘)..."
     eksctl create cluster \
-        --name myeks \
+        --name $CLUSTER_NAME \
         --region $AWS_REGION \
         --nodegroup-name standard-workers \
         --node-type t3.medium \
@@ -72,13 +74,13 @@ fi
 
 # 關聯 OIDC provider (如果尚未關聯)
 echo "🔗 關聯 OIDC provider..."
-eksctl utils associate-iam-oidc-provider --region=$AWS_REGION --cluster=myeks --approve
+eksctl utils associate-iam-oidc-provider --region=$AWS_REGION --cluster=$CLUSTER_NAME --approve
 
 # 創建 service account (如果不存在)
 if ! kubectl get serviceaccount aws-load-balancer-controller -n kube-system &>/dev/null; then
     echo "👤 創建 Load Balancer Controller Service Account..."
     eksctl create iamserviceaccount \
-        --cluster=myeks \
+        --cluster=$CLUSTER_NAME \
         --namespace=kube-system \
         --name=aws-load-balancer-controller \
         --role-name AmazonEKSLoadBalancerControllerRole \
@@ -102,7 +104,7 @@ helm repo update
 if ! helm list -n kube-system | grep aws-load-balancer-controller &>/dev/null; then
     helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
         -n kube-system \
-        --set clusterName=myeks \
+        --set clusterName=$CLUSTER_NAME \
         --set serviceAccount.create=false \
         --set serviceAccount.name=aws-load-balancer-controller
 else
@@ -117,7 +119,7 @@ if ! kubectl get serviceaccount ebs-csi-controller-sa -n kube-system &>/dev/null
     eksctl create iamserviceaccount \
         --name ebs-csi-controller-sa \
         --namespace kube-system \
-        --cluster myeks \
+        --cluster $CLUSTER_NAME \
         --role-name AmazonEKS_EBS_CSI_DriverRole \
         --attach-policy-arn arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy \
         --approve
@@ -127,10 +129,10 @@ fi
 
 # 安裝 EBS CSI Driver addon
 EBS_CSI_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/AmazonEKS_EBS_CSI_DriverRole"
-if ! eksctl get addon --name aws-ebs-csi-driver --cluster myeks &>/dev/null; then
+if ! eksctl get addon --name aws-ebs-csi-driver --cluster $CLUSTER_NAME &>/dev/null; then
     eksctl create addon \
         --name aws-ebs-csi-driver \
-        --cluster myeks \
+        --cluster $CLUSTER_NAME \
         --service-account-role-arn $EBS_CSI_ROLE_ARN \
         --force
 else
@@ -142,9 +144,9 @@ echo "🔧 安裝核心 addons..."
 
 addons=("coredns" "kube-proxy" "vpc-cni")
 for addon in "${addons[@]}"; do
-    if ! eksctl get addon --name $addon --cluster myeks &>/dev/null; then
+    if ! eksctl get addon --name $addon --cluster $CLUSTER_NAME &>/dev/null; then
         echo "📦 安裝 $addon..."
-        eksctl create addon --name $addon --cluster myeks --force
+        eksctl create addon --name $addon --cluster $CLUSTER_NAME --force
     else
         echo "✅ $addon 已安裝"
     fi
@@ -175,7 +177,7 @@ echo "--- 系統 Pods ---"
 kubectl get pods -n kube-system | grep -E "(aws-load-balancer-controller|metrics-server|ebs-csi)"
 
 echo "--- Addons 狀態 ---"
-eksctl get addons --cluster myeks
+eksctl get addons --cluster $CLUSTER_NAME
 
 echo "--- Load Balancer Controller ---"
 kubectl get deployment -n kube-system aws-load-balancer-controller
@@ -186,7 +188,7 @@ kubectl get deployment metrics-server -n kube-system
 echo ""
 echo "🎉 EKS 集群部署完成！"
 echo "📋 集群資訊:"
-echo "   - 集群名稱: myeks"
+echo "   - 集群名稱: $CLUSTER_NAME"
 echo "   - 區域: $AWS_REGION"
 echo "   - 節點數量: 3 (t3.medium)"
 echo "   - 命名空間: fish-game-system"
