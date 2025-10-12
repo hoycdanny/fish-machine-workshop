@@ -191,6 +191,8 @@ aws ecr describe-images --repository-name fish-game-server --region $AWS_REGION
 | `8.nlb.yaml` | Service (LoadBalancer) | NLB WebSocket TCP 直連配置 |
 | `9.ingress.yaml` | Ingress | ALB1 (靜態資源) + ALB2 (API 服務) 配置 |
 
+> **⚠️ 重要提醒**: `9.ingress.yaml` 已更新為使用現代的 `spec.ingressClassName: alb` 格式，移除了已棄用的 `kubernetes.io/ingress.class` 註解，避免部署時的警告訊息。
+
 ### 3.2 手動部署步驟
 
 按照以下順序手動部署所有 Kubernetes 資源：
@@ -213,8 +215,9 @@ kubectl apply -f k8s-manifests/6.server-deployment.yaml
 # 5. 創建服務
 kubectl apply -f k8s-manifests/7.services.yaml
 
-# 6. 創建 Ingress
-kubectl apply -f k8s-manifests/8.ingress.yaml
+# 6. 創建 NLB 和 Ingress
+kubectl apply -f k8s-manifests/8.nlb.yaml
+kubectl apply -f k8s-manifests/9.ingress.yaml
 
 # 7. 檢查部署狀態
 kubectl get pods -n fish-game-system

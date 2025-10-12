@@ -5,13 +5,13 @@ metadata:
   name: client-ingress
   namespace: fish-game-system
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/group.name: fish-game-static
 spec:
+  ingressClassName: alb
   rules:
   - http:
       paths:
@@ -39,13 +39,13 @@ metadata:
   name: api-ingress
   namespace: fish-game-system
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     alb.ingress.kubernetes.io/group.name: fish-game-api
 spec:
+  ingressClassName: alb
   rules:
   - http:
       paths:
