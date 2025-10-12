@@ -100,12 +100,12 @@ docker-compose ps
 
 ```bash
 # 1. 一鍵部署 EKS 集群（預計 15-20 分鐘）
-chmod +x one-click-cmd.sh
-./one-click-cmd.sh
+chmod +x infrastructure/eks/one-click-cmd.sh
+./infrastructure/eks/one-click-cmd.sh
 
 # 2. 構建並推送 Docker 鏡像到 ECR
-chmod +x build-and-push.sh
-./build-and-push.sh
+chmod +x infrastructure/build-and-push.sh
+./infrastructure/build-and-push.sh
 
 # 3. 部署應用到 EKS（詳見第四章）
 # 跟隨 Step 8.5 和 Step 9 的詳細步驟
@@ -275,13 +275,13 @@ echo "All images pushed successfully!"
 
 ```bash
 # 給予執行權限
-chmod +x build-and-push.sh
+chmod +x infrastructure/build-and-push.sh
 
 # 推送 latest 標籤
-./build-and-push.sh
+./infrastructure/build-and-push.sh
 
 # 推送特定版本標籤
-./build-and-push.sh v1.0.0
+./infrastructure/build-and-push.sh v1.0.0
 ```
 
 ---
@@ -338,8 +338,8 @@ docker-compose ps
 
 ```bash
 # 一鍵部署 EKS 集群（預計 15-20 分鐘）
-chmod +x one-click-cmd.sh
-./one-click-cmd.sh
+chmod +x infrastructure/eks/one-click-cmd.sh
+./infrastructure/eks/one-click-cmd.sh
 ```
 
 ### 📋 詳細部署步驟
@@ -1190,12 +1190,21 @@ fish-game-microservices/
 │   ├── 📁 game-session-service/    # 會話服務
 │   ├── 📁 game-server-service/     # 遊戲服務
 │   └── 📁 shared/                  # 共用工具
-├── 📁 k8s/                        # Kubernetes 配置
-├── 📁 scripts/                    # 部署腳本
-├── 📄 docker-compose.yml          # 本地開發配置
-├── 📄 one-click-cmd.sh            # EKS 一鍵部署腳本
-├── 📄 .env                        # 環境變數
-└── 📄 README.md                   # 本文檔
+├── 📁 infrastructure/              # 基礎設施配置
+│   ├── 📁 eks/                     # EKS 部署腳本
+│   │   ├── 📄 one-click-cmd.sh     # EKS 一鍵部署腳本
+│   │   ├── 📄 eks-setup-commands.sh # EKS 詳細設置腳本
+│   │   └── 📄 eks-addons-guide.md  # EKS 插件說明
+│   ├── 📁 k8s/                     # Kubernetes 配置
+│   │   ├── 📄 configmap.yaml       # 配置映射
+│   │   └── 📄 services.yaml        # 服務定義
+│   └── 📄 build-and-push.sh        # Docker 鏡像構建腳本
+├── 📁 scripts/                     # 開發腳本
+│   ├── 📄 start-dev.sh             # 啟動開發環境
+│   └── 📄 stop-dev.sh              # 停止開發環境
+├── 📄 docker-compose.yml           # 本地開發配置
+├── 📄 .env                         # 環境變數
+└── 📄 README.md                    # 本文檔
 ```
 
 ---
