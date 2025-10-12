@@ -42,7 +42,7 @@ graph TB
     end
     
     subgraph "微服務系統"
-        CS[Client Service<br/>:8080]
+        CS[Client Service<br/>:8081]
         GSS[Game Session Service<br/>:8082]
         GS[Game Server Service<br/>:8083]
         Redis[Redis<br/>:6379]
@@ -77,7 +77,7 @@ graph TB
 ```
 fish-game-microservices/
 ├── services/
-│   ├── client-service/          # 前端服務 (8080)
+│   ├── client-service/          # 前端服務 (8081)
 │   ├── game-session-service/    # 會話服務 (8082)
 │   ├── game-server-service/     # 遊戲服務 (8083)
 │   └── shared/                  # 共用模組
@@ -98,7 +98,7 @@ REDIS_HOST=redis
 REDIS_PORT=6379
 
 # 服務端口配置
-CLIENT_SERVICE_PORT=8080
+CLIENT_SERVICE_PORT=8081
 GAME_SESSION_SERVICE_PORT=8082
 GAME_SERVER_SERVICE_PORT=8083
 
@@ -129,7 +129,7 @@ docker-compose ps
 **預期輸出：**
 ```
 NAME                 SERVICE             STATUS              PORTS
-fish-game-client     client-service      running             0.0.0.0:8080->8080/tcp
+fish-game-client     client-service      running             0.0.0.0:8081->8081/tcp
 fish-game-redis      redis               running             0.0.0.0:6379->6379/tcp
 fish-game-server     game-server-service running             0.0.0.0:8083->8083/tcp
 fish-game-session    game-session-service running            0.0.0.0:8082->8082/tcp
@@ -150,9 +150,9 @@ docker-compose logs game-server-service
 
 ### 3.1 健康檢查測試
 
-#### Client Service (8080)
+#### Client Service (8081)
 ```bash
-curl http://localhost:8080/health
+curl http://localhost:8081/health
 ```
 
 **預期回應：**
@@ -181,7 +181,7 @@ curl http://localhost:8083/health
 
 | 服務 | URL | 說明 |
 |------|-----|------|
-| 🎮 遊戲客戶端 | http://localhost:8080 | 玩家遊戲界面 |
+| 🎮 遊戲客戶端 | http://localhost:8081 | 玩家遊戲界面 |
 | 🎯 會話管理後台 | http://localhost:8082/admin | 用戶和房間管理 |
 | 🎮 遊戲監控後台 | http://localhost:8083/admin | 遊戲統計和配置 |
 
@@ -356,12 +356,12 @@ aws ecr list-images --repository-name fish-game-server --region ap-northeast-2
 #### 問題 1: 端口被占用
 ```bash
 # 檢查端口使用情況
-netstat -tulpn | grep :8080
+netstat -tulpn | grep :8081
 netstat -tulpn | grep :8082
 netstat -tulpn | grep :8083
 
 # Windows 用戶使用
-netstat -ano | findstr :8080
+netstat -ano | findstr :8081
 ```
 
 #### 問題 2: Docker 容器無法啟動

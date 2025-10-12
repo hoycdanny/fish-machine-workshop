@@ -45,14 +45,8 @@ services:
     environment:
       - NODE_ENV=${NODE_ENV}
       - SERVICE_PORT=${GAME_SESSION_SERVICE_PORT}
-      - JWT_SECRET=${JWT_SECRET}
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
     networks:
       - fish-game-network
-    depends_on:
-      redis:
-        condition: service_healthy
     restart: unless-stopped
 
   # 遊戲伺服器服務
@@ -70,12 +64,6 @@ services:
       - REDIS_PORT=${REDIS_PORT}
       - GAME_SESSION_SERVICE_HOST=game-session-service
       - GAME_SESSION_SERVICE_PORT=${GAME_SESSION_SERVICE_PORT}
-      - GAME_ROOM_MAX_PLAYERS=${GAME_ROOM_MAX_PLAYERS}
-      - GAME_FISH_SPAWN_INTERVAL=${GAME_FISH_SPAWN_INTERVAL}
-      - FISH_HIT_RATE_SMALL=${FISH_HIT_RATE_SMALL}
-      - FISH_HIT_RATE_MEDIUM=${FISH_HIT_RATE_MEDIUM}
-      - FISH_HIT_RATE_LARGE=${FISH_HIT_RATE_LARGE}
-      - FISH_HIT_RATE_BOSS=${FISH_HIT_RATE_BOSS}
     networks:
       - fish-game-network
     depends_on:

@@ -25,13 +25,13 @@ graph TB
     end
     
     subgraph "AWS 負載均衡"
-        ALB1["ALB-1<br/>靜態資源<br/>8080"]
+        ALB1["ALB-1<br/>靜態資源<br/>8081"]
         ALB2["ALB-2<br/>API 服務<br/>8082"]
         ALB3["ALB-3<br/>WebSocket<br/>8083"]
     end
     
     subgraph "EKS 微服務"
-        ClientService["client-service<br/>靜態資源<br/>8080"]
+        ClientService["client-service<br/>靜態資源<br/>8081"]
         GameSessionService["game-session-service<br/>HTTP API<br/>8082 + /admin"]
         GameServerService["game-server-service<br/>WebSocket<br/>8083 + /admin"]
     end
@@ -70,7 +70,7 @@ graph TB
 
 ### 核心服務
 
-- **client-service** (8080): 前端界面和靜態資源服務
+- **client-service** (8081): 前端界面和靜態資源服務
 - **game-session-service** (8082): 用戶管理、錢包系統、大廳管理 + /admin
 - **game-server-service** (8083): 遊戲邏輯、WebSocket 通訊 + /admin
 - **Redis** (6379): 統一數據存儲和緩存
@@ -91,7 +91,7 @@ docker-compose up -d
 docker-compose ps
 
 # 4. 訪問應用
-# 遊戲界面: http://localhost:8080
+# 遊戲界面: http://localhost:8081
 # 會話管理: http://localhost:8082/admin  
 # 遊戲監控: http://localhost:8083/admin
 ```
@@ -215,9 +215,9 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 COPY --from=builder /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs . .
 USER nodejs
-EXPOSE 8080
+EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8080/health || exit 1
+  CMD curl -f http://localhost:8081/health || exit 1
 CMD ["node", "app.js"]
 ```
 
@@ -316,7 +316,7 @@ docker-compose ps
 
 | 服務 | 地址 | 管理後台 | 說明 |
 |------|------|----------|------|
-| 🎮 遊戲客戶端 | http://localhost:8080 | - | 玩家遊戲界面 |
+| 🎮 遊戲客戶端 | http://localhost:8081 | - | 玩家遊戲界面 |
 | 🎯 遊戲會話服務 | http://localhost:8082 | http://localhost:8082/admin | 用戶管理、錢包管理 |
 | 🎮 遊戲伺服器 | http://localhost:8083 | http://localhost:8083/admin | 遊戲邏輯、即時通訊 |
 | 💾 Redis 數據庫 | localhost:6379 | - | 內存數據存儲 |
@@ -589,7 +589,7 @@ data:
   GAME_SESSION_SERVICE_PORT: "8082"
   GAME_SERVER_SERVICE_HOST: "game-server-service"
   GAME_SERVER_SERVICE_PORT: "8083"
-  CLIENT_SERVICE_PORT: "8080"
+  CLIENT_SERVICE_PORT: "8081"
   
   # 遊戲配置
   GAME_ROOM_MAX_PLAYERS: "4"
@@ -866,7 +866,7 @@ spec:
       - name: client-service
         image: ${ECR_REGISTRY}/fish-game-client:latest
         ports:
-        - containerPort: 8080
+        - containerPort: 8081
         envFrom:
         - configMapRef:
             name: fish-game-config
@@ -880,13 +880,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: 8081
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /health
-            port: 8080
+            port: 8081
           initialDelaySeconds: 5
           periodSeconds: 5
 ---
@@ -899,8 +899,8 @@ spec:
   selector:
     app: client-service
   ports:
-    - port: 8080
-      targetPort: 8080
+    - port: 8081
+      targetPort: 8081
   type: ClusterIP
 EOF
 
@@ -937,7 +937,7 @@ spec:
           service:
             name: client-service
             port:
-              number: 8080
+              number: 8081
       - path: /api
         pathType: Prefix
         backend:
@@ -1006,7 +1006,7 @@ kubectl logs -f deployment/client-service -n fish-game-system
 
 #### ⭐ **AWS Load Balancer Controller** (最重要)
 - **用途**: 支援 ALB 和 NLB 負載均衡器
-- **為什麼需要**: 魚機系統需要 3 個 ALB (靜態資源:8080、API:8082、WebSocket:8083)
+- **為什麼需要**: 魚機系統需要 3 個 ALB (靜態資源:8081、API:8082、WebSocket:8083)
 - **驗證**: `kubectl get deployment -n kube-system aws-load-balancer-controller`
 
 #### ⭐ **EBS CSI Driver** (重要)
@@ -1100,7 +1100,7 @@ spec:
           service:
             name: client-service
             port:
-              number: 8080
+              number: 8081
       - path: /api
         pathType: Prefix
         backend:
@@ -1220,7 +1220,7 @@ fish-game-microservices/
 docker-compose logs service-name
 
 # 檢查端口占用
-netstat -tulpn | grep :8080
+netstat -tulpn | grep :8081
 
 # 重新構建服務
 docker-compose build --no-cache service-name
