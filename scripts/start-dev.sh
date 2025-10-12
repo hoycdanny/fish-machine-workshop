@@ -11,10 +11,13 @@ if ! docker info > /dev/null 2>&1; then
 fi
 
 # 檢查 .env 文件是否存在
-if [ ! -f .env ]; then
+if [ ! -f 1.service-verification-containerization/.env ]; then
     echo "❌ .env 文件不存在，請先創建環境變數配置"
     exit 1
 fi
+
+# 切換到 Chapter 1 目錄
+cd 1.service-verification-containerization
 
 # 停止並移除現有容器
 echo "🧹 清理現有容器..."

@@ -4,6 +4,9 @@
 
 echo "🛑 停止電子捕魚機微服務系統..."
 
+# 切換到 Chapter 1 目錄
+cd 1.service-verification-containerization
+
 # 停止並移除容器
 docker-compose down
 
