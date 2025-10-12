@@ -23,7 +23,7 @@
 ### 2. Clone 專案並部署
 ```bash
 # Clone 專案
-git clone https://github.com/your-repo/fish-game-eks-workshop.git
+git clone https://github.com/hoycdanny/fish-machine-workshop.git
 cd fish-game-eks-workshop/2.eks-cluster-setup
 
 # 執行一鍵部署 (約需 15-20 分鐘)

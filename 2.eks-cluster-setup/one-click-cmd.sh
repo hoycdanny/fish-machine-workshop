@@ -44,9 +44,7 @@ else
         --nodes-min 1 \
         --nodes-max 4 \
         --managed \
-        --with-oidc \
-        --ssh-access \
-        --ssh-public-key default
+        --with-oidc
 fi
 
 # 檢查節點
