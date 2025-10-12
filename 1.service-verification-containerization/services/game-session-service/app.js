@@ -1,9 +1,28 @@
+// ===== 服務配置 (EKS 部署時只需修改這部分) =====
+const CONFIG = {
+  // 當前服務配置
+  SERVICE_PORT: process.env.SERVICE_PORT || 8082,
+  
+  // 其他服務通信配置 (使用服務名稱)
+  GAME_SERVER_SERVICE: {
+    HOST: process.env.GAME_SERVER_SERVICE_HOST || 'game-server-service',
+    PORT: process.env.GAME_SERVER_SERVICE_PORT || 8083
+  },
+  
+  // 數據庫配置
+  REDIS: {
+    HOST: process.env.REDIS_HOST || 'redis',
+    PORT: process.env.REDIS_PORT || 6379
+  }
+};
+// ===== 配置結束 =====
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.SERVICE_PORT || 8082;
+const PORT = CONFIG.SERVICE_PORT;
 
 // 基本中間件
 app.use(cors());

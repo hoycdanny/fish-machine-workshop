@@ -1,6 +1,9 @@
 # 使用 Node.js 18 官方映像
 FROM node:18-alpine
 
+# 安裝 curl 用於健康檢查
+RUN apk add --no-cache curl
+
 # 設置工作目錄
 WORKDIR /app
 

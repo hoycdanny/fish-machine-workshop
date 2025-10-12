@@ -48,6 +48,11 @@ services:
     networks:
       - fish-game-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${GAME_SESSION_SERVICE_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # 遊戲伺服器服務
   game-server-service:
@@ -70,6 +75,11 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${GAME_SERVER_SERVICE_PORT}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   fish-game-network:

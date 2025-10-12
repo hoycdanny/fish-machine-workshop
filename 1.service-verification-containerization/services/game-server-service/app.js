@@ -1,3 +1,22 @@
+// ===== 服務配置 (EKS 部署時只需修改這部分) =====
+const CONFIG = {
+  // 當前服務配置
+  SERVICE_PORT: process.env.SERVICE_PORT || 8083,
+  
+  // 其他服務通信配置 (使用服務名稱)
+  GAME_SESSION_SERVICE: {
+    HOST: process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service',
+    PORT: process.env.GAME_SESSION_SERVICE_PORT || 8082
+  },
+  
+  // 數據庫配置
+  REDIS: {
+    HOST: process.env.REDIS_HOST || 'redis',
+    PORT: process.env.REDIS_PORT || 6379
+  }
+};
+// ===== 配置結束 =====
+
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -15,13 +34,13 @@ const io = socketIo(server, {
   }
 });
 
-const PORT = process.env.SERVICE_PORT || 8083;
+const PORT = CONFIG.SERVICE_PORT;
 
 // Redis 客戶端設置 - 修復連接配置
 const redisClient = redis.createClient({
   socket: {
-    host: process.env.REDIS_HOST || 'redis',
-    port: process.env.REDIS_PORT || 6379
+    host: CONFIG.REDIS.HOST,
+    port: CONFIG.REDIS.PORT
   }
 });
 
@@ -232,7 +251,7 @@ let configManager;
 // 同步餘額到用戶管理系統
 async function syncBalanceToUserSystem(userId, newBalance) {
   try {
-    const response = await axios.post(`http://${process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}/api/v1/wallet/update-balance`, {
+    const response = await axios.post(`http://${CONFIG.GAME_SESSION_SERVICE.HOST}:${CONFIG.GAME_SESSION_SERVICE.PORT}/api/v1/wallet/update-balance`, {
       userId: userId,
       balance: newBalance
     });
@@ -245,7 +264,7 @@ async function syncBalanceToUserSystem(userId, newBalance) {
 // 同步房間狀態到遊戲會話服務
 async function syncRoomStatusToSessionService(roomId, status) {
   try {
-    const response = await axios.post(`http://${process.env.GAME_SESSION_SERVICE_HOST || 'game-session-service'}:${process.env.GAME_SESSION_SERVICE_PORT || 8082}/api/v1/lobby/rooms/update-status`, {
+    const response = await axios.post(`http://${CONFIG.GAME_SESSION_SERVICE.HOST}:${CONFIG.GAME_SESSION_SERVICE.PORT}/api/v1/lobby/rooms/update-status`, {
       roomId: roomId,
       status: status
     });

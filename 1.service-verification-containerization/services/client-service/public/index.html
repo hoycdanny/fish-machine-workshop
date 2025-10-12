@@ -8,8 +8,8 @@
     <script>
         // 遊戲配置 - 可由後端注入或使用默認值
         window.GAME_CONFIG = {
-            API_BASE: '{{API_BASE}}' !== '{{API_BASE}}' ? '{{API_BASE}}' : 'http://localhost:8082',
-            GAME_SERVER: '{{GAME_SERVER}}' !== '{{GAME_SERVER}}' ? '{{GAME_SERVER}}' : 'http://localhost:8083'
+            API_BASE: '{{API_BASE}}',
+            GAME_SERVER: '{{GAME_SERVER}}'
         };
     </script>
     <style>
@@ -601,7 +601,20 @@
     <!-- 登入表單 -->
     <div id="loginForm" class="login-form">
         <h1>🐟 多人捕魚機</h1>
-        <p style="margin-bottom: 30px; color: #7f8c8d;">歡迎來到海底世界！</p>
+        <p style="margin-bottom: 20px; color: #7f8c8d;">歡迎來到海底世界！</p>
+
+        <!-- 服務狀態顯示 -->
+        <div id="serviceStatus" style="margin-bottom: 20px; padding: 10px; border-radius: 5px; font-size: 12px;">
+            <div style="margin-bottom: 5px;"><strong>🔧 服務狀態</strong></div>
+            <div id="sessionServiceStatus" style="margin-bottom: 3px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin-right: 5px;"></span>
+                會話服務: <span>檢查中...</span>
+            </div>
+            <div id="gameServerStatus" style="margin-bottom: 3px;">
+                <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ccc; margin-right: 5px;"></span>
+                遊戲服務: <span>檢查中...</span>
+            </div>
+        </div>
 
         <div class="form-group">
             <label for="username">用戶名</label>
@@ -736,6 +749,69 @@
         const API_BASE = window.GAME_CONFIG?.API_BASE || 'http://localhost:8082';
         const GAME_SERVER = window.GAME_CONFIG?.GAME_SERVER || 'http://localhost:8083';
 
+        // 服務狀態檢查
+        async function checkServiceStatus() {
+            const sessionStatus = document.querySelector('#sessionServiceStatus span:last-child');
+            const gameStatus = document.querySelector('#gameServerStatus span:last-child');
+            const sessionDot = document.querySelector('#sessionServiceStatus span:first-child');
+            const gameDot = document.querySelector('#gameServerStatus span:first-child');
+            
+            const loginBtn = document.querySelector('button[onclick="login()"]');
+            const registerBtn = document.querySelector('button[onclick="register()"]');
+            
+            let sessionOk = false;
+            let gameOk = false;
+
+            // 檢查會話服務
+            try {
+                const response = await fetch(`${API_BASE}/health`, { timeout: 3000 });
+                if (response.ok) {
+                    sessionStatus.textContent = '正常';
+                    sessionDot.style.background = '#27ae60';
+                    sessionOk = true;
+                } else {
+                    sessionStatus.textContent = '異常';
+                    sessionDot.style.background = '#e74c3c';
+                }
+            } catch (error) {
+                sessionStatus.textContent = '離線';
+                sessionDot.style.background = '#e74c3c';
+            }
+
+            // 檢查遊戲服務
+            try {
+                const response = await fetch(`${GAME_SERVER}/health`, { timeout: 3000 });
+                if (response.ok) {
+                    gameStatus.textContent = '正常';
+                    gameDot.style.background = '#27ae60';
+                    gameOk = true;
+                } else {
+                    gameStatus.textContent = '異常';
+                    gameDot.style.background = '#e74c3c';
+                }
+            } catch (error) {
+                gameStatus.textContent = '離線';
+                gameDot.style.background = '#e74c3c';
+            }
+
+            // 控制登入和註冊按鈕
+            if (sessionOk && gameOk) {
+                loginBtn.disabled = false;
+                registerBtn.disabled = false;
+                loginBtn.style.opacity = '1';
+                registerBtn.style.opacity = '1';
+                loginBtn.title = '';
+                registerBtn.title = '';
+            } else {
+                loginBtn.disabled = true;
+                registerBtn.disabled = true;
+                loginBtn.style.opacity = '0.5';
+                registerBtn.style.opacity = '0.5';
+                loginBtn.title = '後端服務異常，無法登入';
+                registerBtn.title = '後端服務異常，無法註冊';
+            }
+        }
+
         // 調試模式
         const DEBUG = true;
         function debugLog(...args) {
@@ -765,6 +841,12 @@
 
         // 用戶註冊
         async function register() {
+            // 檢查按鈕是否被禁用
+            if (event.target.disabled) {
+                showStatus('後端服務異常，無法註冊', 'error');
+                return;
+            }
+
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
 
@@ -782,21 +864,35 @@
                     body: JSON.stringify({ username, password })
                 });
 
+                if (!response.ok) {
+                    // HTTP 錯誤狀態碼
+                    showStatus(`註冊失敗: HTTP ${response.status}`, 'error');
+                    return;
+                }
+
                 const data = await response.json();
 
                 if (data.success) {
-                    showStatus('註冊成功！請登入');
+                    showStatus('註冊成功！請登入', 'success');
                 } else {
+                    // 後端返回的業務邏輯錯誤
                     showStatus(data.message || '註冊失敗', 'error');
                 }
             } catch (error) {
                 console.error('註冊錯誤:', error);
-                showStatus('網路錯誤，請檢查服務是否正常運行', 'error');
+                // 網路連接錯誤
+                showStatus('無法連接到後端服務，請檢查網路連接', 'error');
             }
         }
 
         // 用戶登入
         async function login() {
+            // 檢查按鈕是否被禁用
+            if (event.target.disabled) {
+                showStatus('後端服務異常，無法登入', 'error');
+                return;
+            }
+
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value.trim();
 
@@ -813,6 +909,12 @@
                     },
                     body: JSON.stringify({ username, password })
                 });
+
+                if (!response.ok) {
+                    // HTTP 錯誤狀態碼
+                    showStatus(`登入失敗: HTTP ${response.status}`, 'error');
+                    return;
+                }
 
                 const data = await response.json();
 
@@ -838,13 +940,15 @@
                     // 連接 WebSocket
                     connectWebSocket();
 
-                    showStatus('登入成功！請創建或加入房間開始遊戲');
+                    showStatus('登入成功！請創建或加入房間開始遊戲', 'success');
                 } else {
+                    // 後端返回的業務邏輯錯誤（如用戶不存在、密碼錯誤等）
                     showStatus(data.message || '登入失敗', 'error');
                 }
             } catch (error) {
                 console.error('登入錯誤:', error);
-                showStatus('網路錯誤，請檢查服務是否正常運行', 'error');
+                // 網路連接錯誤
+                showStatus('無法連接到後端服務，請檢查網路連接', 'error');
             }
         }
 
@@ -1830,6 +1934,11 @@
         // 頁面加載完成後初始化
         document.addEventListener('DOMContentLoaded', async () => {
             debugLog('頁面載入完成，開始初始化');
+
+            // 立即檢查服務狀態
+            checkServiceStatus();
+            // 每30秒檢查一次服務狀態
+            setInterval(checkServiceStatus, 30000);
 
             try {
                 // 顯示載入狀態
