@@ -205,7 +205,6 @@ graph TB
 - **Amazon EKS** - 託管 Kubernetes 服務
 - **AWS Application Load Balancer (ALB)** - HTTP/HTTPS 負載均衡
 - **AWS Network Load Balancer (NLB)** - TCP 負載均衡
-- **AWS VPC** - 虛擬私有雲網絡
 
 ### 開發工具
 - **kubectl** - Kubernetes 命令行工具
