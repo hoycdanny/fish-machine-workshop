@@ -43,6 +43,16 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API 健康檢查端點 (供前端使用)
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    service: 'game-session-service',
+    version: '1.0.0'
+  });
+});
+
 // 簡單的內存用戶存儲（開發用）
 const users = new Map();
 

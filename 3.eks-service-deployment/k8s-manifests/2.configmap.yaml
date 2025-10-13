@@ -17,5 +17,9 @@ data:
   GAME_SESSION_SERVICE_HOST: "game-session-service"
   GAME_SERVER_SERVICE_HOST: "game-server-service"
   
+  # 前端瀏覽器訪問配置 (EKS 外部 URL) - 部署後填入實際 ALB/NLB 地址
+  FRONTEND_SESSION_URL: ""
+  FRONTEND_GAME_URL: ""
+  
   # 環境配置
   NODE_ENV: "production"

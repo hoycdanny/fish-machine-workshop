@@ -42,11 +42,33 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/group.name: fish-game-api
+    # 路徑重寫 - 將 /game-admin 重寫為 /admin
+    alb.ingress.kubernetes.io/actions.game-admin-rewrite: |
+      {
+        "type": "rewrite-path",
+        "rewritePath": "/admin"
+      }
 spec:
   ingressClassName: alb
   rules:
   - http:
       paths:
+      # 遊戲服務 Admin 管理面板 (路徑重寫)
+      - path: /game-admin
+        pathType: Prefix
+        backend:
+          service:
+            name: game-admin-rewrite
+            port:
+              name: use-annotation
+      # 會話服務 Admin 管理面板
+      - path: /admin
+        pathType: Prefix
+        backend:
+          service:
+            name: game-session-service
+            port:
+              number: 8082
       # 遊戲會話服務 - API 端點
       - path: /api
         pathType: Prefix

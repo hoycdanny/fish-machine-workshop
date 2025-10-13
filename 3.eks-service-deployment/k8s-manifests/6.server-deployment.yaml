@@ -6,7 +6,7 @@ metadata:
   labels:
     app: game-server-service
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: game-server-service
@@ -18,7 +18,7 @@ spec:
       containers:
       - name: game-server-service
         # 注意：需要替換為你的 ECR 映像 URI
-        image: 946430773461.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server
         ports:
         - containerPort: 8083
         envFrom:
