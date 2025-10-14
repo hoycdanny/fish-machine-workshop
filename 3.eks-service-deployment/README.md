@@ -81,78 +81,34 @@ ls -la k8s-manifests/
 # Step 12: 驗證完整部署
 ```
 
-## 🏗️ 補充 ECR 鏡像
+## 🚀 快速部署選項
 
-你已經有部分 ECR 倉庫，讓我們檢查並補充缺失的部分：
+### 選項 1: 一鍵自動部署（推薦）
 
-### Step 1: 檢查並創建缺失的 ECR 倉庫
-
-```bash
-# 設置環境變數
-export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AWS_REGION=ap-northeast-2
-export ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-# 檢查現有倉庫
-aws ecr describe-repositories --region ${AWS_REGION}
-
-# 創建缺失的 ECR 倉庫（如果不存在）
-aws ecr create-repository --repository-name fish-game-session --region ${AWS_REGION} 2>/dev/null || echo "fish-game-session 倉庫已存在"
-aws ecr create-repository --repository-name fish-game-server --region ${AWS_REGION} 2>/dev/null || echo "fish-game-server 倉庫已存在"
-
-# 獲取 ECR 登入令牌
-aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-
-echo "✅ ECR 倉庫檢查完成"
-```
-
-### Step 2: 構建並推送 Docker 鏡像
+如果你想快速部署而不需要了解每個步驟的細節，可以使用提供的自動化腳本：
 
 ```bash
-# 確保你在專案根目錄
-cd /path/to/fish-game-microservices
+# 🚀 一鍵部署所有服務
+./deploy.sh
 
-# 構建並推送 client-service
-cd services/client-service
-docker build -t fish-game-client .
-docker tag fish-game-client:latest ${ECR_REGISTRY}/fish-game-client:latest
-docker push ${ECR_REGISTRY}/fish-game-client:latest
+# 🔍 檢查部署狀態
+./status.sh
 
-# 構建並推送 game-session-service
-cd ../game-session-service
-docker build -t fish-game-session .
-docker tag fish-game-session:latest ${ECR_REGISTRY}/fish-game-session:latest
-docker push ${ECR_REGISTRY}/fish-game-session:latest
-
-# 構建並推送 game-server-service
-cd ../game-server-service
-docker build -t fish-game-server .
-docker tag fish-game-server:latest ${ECR_REGISTRY}/fish-game-server:latest
-docker push ${ECR_REGISTRY}/fish-game-server:latest
-
-cd ../../
-echo "✅ 所有鏡像推送完成"
+# 🧹 清除所有資源（如需重新開始）
+./cleanup.sh
 ```
 
-### Step 3: 更新 Deployment 使用 ECR 鏡像
+**腳本功能說明：**
 
-```bash
-# 更新 client-service 使用 ECR 鏡像
-kubectl set image deployment/client-service client-service=${ECR_REGISTRY}/fish-game-client:latest -n fish-game-system
+| 腳本 | 功能 | 使用場景 |
+|------|------|----------|
+| `deploy.sh` | 自動執行完整部署流程 | 快速部署，適合初學者 |
+| `status.sh` | 檢查所有資源狀態和健康檢查 | 診斷問題，查看部署狀態 |
+| `cleanup.sh` | 安全清除所有部署的資源 | 重新開始，清理環境 |
 
-# 更新 game-session-service 使用 ECR 鏡像  
-kubectl set image deployment/game-session-service game-session-service=${ECR_REGISTRY}/fish-game-session:latest -n fish-game-system
+### 選項 2: 手動逐步部署（學習用）
 
-# 更新 game-server-service 使用 ECR 鏡像
-kubectl set image deployment/game-server-service game-server-service=${ECR_REGISTRY}/fish-game-server:latest -n fish-game-system
-
-# 檢查更新狀態
-kubectl rollout status deployment/client-service -n fish-game-system
-kubectl rollout status deployment/game-session-service -n fish-game-system
-kubectl rollout status deployment/game-server-service -n fish-game-system
-
-echo "✅ 所有服務已更新為使用 ECR 鏡像"
-```
+如果你想深入了解每個部署步驟，請繼續閱讀下面的詳細流程。
 
 ## 🏗️ 完整部署流程（按文件順序）
 
@@ -408,6 +364,7 @@ echo "🎮 遊戲頁面: http://${CLIENT_ALB}"
 echo "🔧 API 服務: http://${API_ALB}"
 ```
 
+
 **🔍 理解 Ingress 路由規則**
 
 ```bash
@@ -445,6 +402,7 @@ echo "  Client ALB: ${CLIENT_ALB}"
 echo "  API ALB: ${API_ALB}"
 echo "  NLB: ${NLB_ADDRESS}"
 ```
+
 
 ### Step 11: 更新 ConfigMap 前端配置
 
@@ -510,6 +468,7 @@ kubectl get events -n fish-game-system --sort-by='.lastTimestamp' | tail -10
 
 echo "🎉 部署驗證完成！"
 ```
+
 
 ## 🎮 訪問你的遊戲
 
@@ -589,24 +548,6 @@ graph TB
     class Redis data
 ```
 
-### 網絡流量分析
-
-```bash
-# 💡 流量路徑分析
-echo "🌐 網絡流量路徑："
-echo ""
-echo "1. 遊戲頁面訪問："
-echo "   玩家瀏覽器 → ALB-1 → client-service → 返回 HTML/CSS/JS"
-echo ""
-echo "2. API 調用："
-echo "   前端 JS → ALB-2 → game-session-service → Redis → 返回數據"
-echo ""
-echo "3. WebSocket 遊戲："
-echo "   前端 JS → NLB → game-server-service → Redis → 實時遊戲數據"
-echo ""
-echo "4. 服務間通信："
-echo "   game-server-service → game-session-service (錢包操作)"
-```
 
 ## 🔧 故障排除指南
 
@@ -698,14 +639,116 @@ kubectl get events -n fish-game-system --sort-by='.lastTimestamp' | tail -5
 - 資源限制和監控
 - 安全最佳實踐
 
-## 🚀 下一步學習
+## 🛠️ 輔助腳本詳細說明
 
-在下一章中，我們將學習：
+### deploy.sh - 一鍵部署腳本
 
-- 🔍 **監控和日誌**：設置 Prometheus 和 Grafana
-- 📈 **自動擴展**：配置 HPA 和 Cluster Autoscaler  
-- 🔒 **安全加固**：RBAC、Network Policy、Pod Security
-- 🔄 **CI/CD 流水線**：自動化部署和更新
+**功能特點：**
+- ✅ 自動檢查前置條件（kubectl、EKS 連接、AWS Load Balancer Controller）
+- 🔄 按正確順序部署所有 Kubernetes 資源
+- ⏳ 智能等待 Pod 和負載均衡器就緒
+- 🔧 自動更新 ConfigMap 前端配置
+- 🏥 執行健康檢查和部署驗證
+- 🎨 彩色輸出和詳細日誌
+
+**執行流程：**
+1. 檢查環境前置條件
+2. 部署 Namespace → ConfigMap → Redis → 應用服務
+3. 創建 Services → NLB → ALB
+4. 等待負載均衡器創建完成
+5. 更新前端配置並重啟服務
+6. 驗證部署並顯示訪問地址
+
+### status.sh - 狀態檢查腳本
+
+**檢查項目：**
+- 📊 **命名空間狀態**：確認 fish-game-system 存在
+- 🏥 **Pod 健康狀態**：檢查所有服務 Pod 運行狀況
+- 🌐 **Service 狀態**：確認內部服務和 NLB 創建情況
+- 🔗 **Ingress 狀態**：檢查 ALB 創建和地址分配
+- ⚙️ **ConfigMap 配置**：驗證前端 URL 配置是否正確
+- 🏥 **健康檢查測試**：實際測試服務 API 可用性
+- 📋 **最近事件**：顯示集群中的最新事件日誌
+
+**使用場景：**
+```bash
+# 快速檢查部署狀態
+./status.sh
+
+# 診斷部署問題
+./status.sh | grep "❌\|⚠️"
+
+# 獲取訪問地址
+./status.sh | grep "http://"
+```
+
+### cleanup.sh - 清理腳本
+
+**安全清理流程：**
+1. 🚨 **確認操作**：防止意外刪除
+2. 🔍 **顯示當前資源**：讓你了解將要刪除的內容
+3. 🔗 **先刪除負載均衡器**：避免 AWS 資源殘留
+4. 🏗️ **再刪除應用資源**：按依賴順序清理
+5. ⏳ **等待完全終止**：確保所有 Pod 完全停止
+6. 🗑️ **刪除命名空間**：最後清理命名空間
+7. ✅ **驗證清理結果**：確認清理完成
+
+**特色功能：**
+- 🛡️ 交互式確認，防止誤操作
+- ⏳ 智能等待，確保 AWS 資源完全刪除
+- 🔍 清理驗證，檢查是否有殘留資源
+- 📊 清理摘要，顯示已刪除的資源
+
+**使用場景：**
+```bash
+# 完全清理環境（重新開始）
+./cleanup.sh
+
+# 清理後重新部署
+./cleanup.sh && ./deploy.sh
+```
+
+## 🔧 腳本故障排除
+
+### 常見問題和解決方案
+
+**1. deploy.sh 執行失敗**
+```bash
+# 檢查前置條件
+kubectl get nodes
+kubectl get deployment -n kube-system aws-load-balancer-controller
+
+# 查看詳細錯誤
+./deploy.sh 2>&1 | tee deploy.log
+```
+
+**2. 負載均衡器創建超時**
+```bash
+# 檢查 AWS Load Balancer Controller 日誌
+kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+
+# 手動檢查 AWS 控制台
+aws elbv2 describe-load-balancers --region ap-northeast-2
+```
+
+**3. 服務健康檢查失敗**
+```bash
+# 檢查 Pod 日誌
+kubectl logs -n fish-game-system -l app=game-session-service
+
+# 檢查服務端點
+kubectl get endpoints -n fish-game-system
+```
+
+**4. cleanup.sh 清理不完全**
+```bash
+# 手動檢查殘留資源
+kubectl get all -n fish-game-system
+aws elbv2 describe-load-balancers --region ap-northeast-2
+
+# 強制刪除命名空間（如果卡住）
+kubectl delete namespace fish-game-system --force --grace-period=0
+```
 
 ---
 
