@@ -42,6 +42,33 @@ aws ecr list-images --repository-name fish-game-server --region ap-northeast-2 2
 echo "✅ 環境檢查完成！"
 ```
 
+### 🔧 必要：設定 AWS Load Balancer Controller IAM 權限
+
+**在開始部署前，必須確保 Load Balancer Controller 有正確的 IAM 權限：**
+
+```bash
+echo "🔧 設定 AWS Load Balancer Controller IAM 權限"
+echo "============================================="
+
+# 附加 ElasticLoadBalancingFullAccess 政策到 Load Balancer Controller Role
+aws iam attach-role-policy --role-name AmazonEKSLoadBalancerControllerRole --policy-arn arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess
+
+echo "✅ ElasticLoadBalancingFullAccess 政策已附加"
+
+# 驗證兩個必要政策都已附加
+echo "驗證 IAM 政策："
+aws iam list-attached-role-policies --role-name AmazonEKSLoadBalancerControllerRole
+
+echo "✅ IAM 權限設定完成！"
+```
+
+**驗證結果：**
+`AmazonEKSLoadBalancerControllerRole` 應該有以下兩個政策：
+- ✅ `AWSLoadBalancerControllerIAMPolicy` (客戶受管)
+- ✅ `ElasticLoadBalancingFullAccess` (AWS 受管)
+
+**⚠️ 重要：此步驟必須在部署前完成，否則 ALB/NLB 創建會失敗！**
+
 ## 🔍 **你的當前環境狀況**
 
 根據檢查，你的環境已經有以下資源：
@@ -110,7 +137,73 @@ ls -la k8s-manifests/
 
 如果你想深入了解每個部署步驟，請繼續閱讀下面的詳細流程。
 
+## 🔧 Step 0: 更新 Deployment 鏡像配置
+
+**⚠️ 重要：在開始部署之前，必須先更新 deployment 文件中的鏡像地址！**
+
+deployment 文件中的鏡像地址使用模板格式，需要替換為你的實際 ECR 地址。
+
+### 🚀 一鍵更新腳本（推薦）
+
+複製並執行以下命令來自動更新所有 deployment 文件：
+
+```bash
+# 設置環境變數
+export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+export AWS_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}
+
+echo "🔄 更新 deployment 文件中的鏡像地址..."
+echo "Account ID: ${AWS_ACCOUNT_ID}"
+echo "Region: ${AWS_REGION}"
+
+# 更新 client-deployment.yaml
+sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/4.client-deployment.yaml
+sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/4.client-deployment.yaml
+
+# 更新 session-deployment.yaml  
+sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/5.session-deployment.yaml
+sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/5.session-deployment.yaml
+
+# 更新 server-deployment.yaml
+sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/6.server-deployment.yaml
+sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/6.server-deployment.yaml
+
+echo "✅ 鏡像地址更新完成！"
+
+# 驗證更新結果
+echo ""
+echo "📋 更新後的鏡像地址："
+grep "image:" k8s-manifests/4.client-deployment.yaml | grep -v "#" | sed 's/^[ \t]*//'
+grep "image:" k8s-manifests/5.session-deployment.yaml | grep -v "#" | sed 's/^[ \t]*//'
+grep "image:" k8s-manifests/6.server-deployment.yaml | grep -v "#" | sed 's/^[ \t]*//'
+```
+
+### 🔍 手動更新方式
+
+如果你偏好手動更新，請編輯以下文件，將 `<AWS_ACCOUNT_ID>` 替換為你的實際 AWS Account ID：
+
+**需要更新的文件：**
+- `k8s-manifests/4.client-deployment.yaml`
+- `k8s-manifests/5.session-deployment.yaml`
+- `k8s-manifests/6.server-deployment.yaml`
+
+**更新範例：**
+```yaml
+# 更新前（模板格式）
+image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client
+
+# 更新後（實際地址，假設 Account ID 是 123456789012）
+image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest
+```
+
+**💡 為什麼需要這個步驟？**
+- Kubernetes 無法解析模板格式的鏡像地址
+- 每個 AWS 帳戶的 ECR 地址都不同
+- 不同區域的 ECR 端點也不同
+
 ## 🏗️ 完整部署流程（按文件順序）
+
+**前置條件：請確保已完成 Step 0 的鏡像地址更新！**
 
 按照 k8s-manifests 目錄中的文件順序進行部署：
 

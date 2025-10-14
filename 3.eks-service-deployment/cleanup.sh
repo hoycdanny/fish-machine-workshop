@@ -93,18 +93,29 @@ show_current_resources() {
 delete_ingress() {
     log_step "刪除 Ingress 和 ALB"
     
-    if kubectl get ingress -n fish-game-system &> /dev/null; then
+    # 檢查是否真的有 Ingress 資源
+    local ingress_count=$(kubectl get ingress -n fish-game-system --no-headers 2>/dev/null | wc -l)
+    
+    if [ "$ingress_count" -gt 0 ]; then
         log_info "刪除 Ingress 資源..."
         kubectl delete -f k8s-manifests/9.ingress.yaml --ignore-not-found=true
         
-        log_info "等待 ALB 刪除完成（預計需要 1-2 分鐘）..."
-        # 等待 Ingress 完全刪除
-        while kubectl get ingress -n fish-game-system &> /dev/null; do
+        log_info "等待 ALB 刪除完成（最多等待 3 分鐘）..."
+        # 等待 Ingress 完全刪除，但設置超時
+        local timeout=180  # 3 分鐘
+        local elapsed=0
+        while [ $(kubectl get ingress -n fish-game-system --no-headers 2>/dev/null | wc -l) -gt 0 ] && [ $elapsed -lt $timeout ]; do
             echo -n "."
             sleep 5
+            elapsed=$((elapsed + 5))
         done
         echo ""
-        log_success "ALB 刪除完成"
+        
+        if [ $(kubectl get ingress -n fish-game-system --no-headers 2>/dev/null | wc -l) -gt 0 ]; then
+            log_warning "ALB 刪除超時，但會在後台繼續刪除"
+        else
+            log_success "ALB 刪除完成"
+        fi
     else
         log_info "未發現 Ingress 資源"
     fi
@@ -114,18 +125,27 @@ delete_ingress() {
 delete_nlb() {
     log_step "刪除 NLB"
     
-    if kubectl get service game-server-nlb -n fish-game-system &> /dev/null; then
+    # 檢查是否真的有 NLB Service
+    if kubectl get service game-server-nlb -n fish-game-system --no-headers 2>/dev/null | grep -q game-server-nlb; then
         log_info "刪除 NLB 資源..."
         kubectl delete -f k8s-manifests/8.nlb.yaml --ignore-not-found=true
         
-        log_info "等待 NLB 刪除完成（預計需要 1-2 分鐘）..."
-        # 等待 NLB Service 完全刪除
-        while kubectl get service game-server-nlb -n fish-game-system &> /dev/null; do
+        log_info "等待 NLB 刪除完成（最多等待 3 分鐘）..."
+        # 等待 NLB Service 完全刪除，但設置超時
+        local timeout=180  # 3 分鐘
+        local elapsed=0
+        while kubectl get service game-server-nlb -n fish-game-system --no-headers 2>/dev/null | grep -q game-server-nlb && [ $elapsed -lt $timeout ]; do
             echo -n "."
             sleep 5
+            elapsed=$((elapsed + 5))
         done
         echo ""
-        log_success "NLB 刪除完成"
+        
+        if kubectl get service game-server-nlb -n fish-game-system --no-headers 2>/dev/null | grep -q game-server-nlb; then
+            log_warning "NLB 刪除超時，但會在後台繼續刪除"
+        else
+            log_success "NLB 刪除完成"
+        fi
     else
         log_info "未發現 NLB 資源"
     fi
@@ -157,21 +177,31 @@ delete_application_resources() {
 wait_for_pods_termination() {
     log_step "等待 Pod 終止"
     
-    log_info "等待所有 Pod 完全終止..."
-    while kubectl get pods -n fish-game-system --no-headers 2>/dev/null | grep -v "Terminating" | wc -l | grep -v "^0$" > /dev/null; do
+    log_info "等待所有 Pod 完全終止（最多等待 2 分鐘）..."
+    local timeout=120  # 2 分鐘
+    local elapsed=0
+    
+    while kubectl get pods -n fish-game-system --no-headers 2>/dev/null | grep -v "Terminating" | wc -l | grep -v "^0$" > /dev/null && [ $elapsed -lt $timeout ]; do
         echo -n "."
         sleep 3
+        elapsed=$((elapsed + 3))
     done
     echo ""
     
     # 等待 Terminating 狀態的 Pod 也完全消失
-    while kubectl get pods -n fish-game-system --no-headers 2>/dev/null | wc -l | grep -v "^0$" > /dev/null; do
+    elapsed=0
+    while kubectl get pods -n fish-game-system --no-headers 2>/dev/null | wc -l | grep -v "^0$" > /dev/null && [ $elapsed -lt $timeout ]; do
         echo -n "."
         sleep 3
+        elapsed=$((elapsed + 3))
     done
     echo ""
     
-    log_success "所有 Pod 已終止"
+    if kubectl get pods -n fish-game-system --no-headers 2>/dev/null | wc -l | grep -v "^0$" > /dev/null; then
+        log_warning "部分 Pod 終止超時，但會繼續清理"
+    else
+        log_success "所有 Pod 已終止"
+    fi
 }
 
 # 刪除命名空間
