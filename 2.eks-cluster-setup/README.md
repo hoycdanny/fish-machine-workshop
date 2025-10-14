@@ -17,25 +17,7 @@
 2. **Kubernetes 配置**: 應用 `k8s-manifests/` 中的配置文件
 3. **服務驗證**: 驗證所有服務正常運行
 
-## 文件結構
 
-```
-2.eks-cluster-setup/
-├── README.md                 # 本文件
-├── one-click-cmd.sh          # EKS 叢集一鍵部署腳本
-├── k8s-manifests/            # Kubernetes 配置文件
-│   ├── namespace.yaml        # 命名空間
-│   ├── configmap.yaml        # 配置映射
-│   ├── redis-deployment.yaml # Redis 部署
-│   ├── client-deployment.yaml # 客戶端服務部署
-│   ├── session-deployment.yaml # 會話服務部署
-│   ├── server-deployment.yaml # 伺服器服務部署
-│   ├── services.yaml         # 服務配置
-│   └── ingress.yaml          # Ingress 配置
-└── scripts/                  # 輔助腳本
-    ├── deploy-services.sh    # 部署服務腳本
-    └── verify-deployment.sh  # 驗證部署腳本
-```
 
 ## 前置條件
 
@@ -51,7 +33,23 @@
    ./one-click-cmd.sh
    ```
 
+![EKS 集群創建過程](image/1.cluster-done.PNG)
+*圖 2.1：EKS 集群創建過程，顯示 eksctl 創建集群的詳細步驟*
+
+![EKS 集群創建完成](image/2.cluster-done.PNG)
+*圖 2.2：EKS 集群創建完成，顯示集群狀態和節點信息*
+
 2. 驗證部署：
    ```bash
-   ./scripts/verify-deployment.sh
+   # 檢查集群狀態
+   kubectl get nodes
+   
+   # 檢查所有 Pod 狀態
+   kubectl get pods -A
+   
+   # 檢查服務狀態
+   kubectl get services -A
    ```
+
+![EKS 部署完成驗證](image/2.eks-deploy-done.PNG)
+*圖 2.3：EKS 部署完成驗證，顯示所有服務和 Pod 的運行狀態*

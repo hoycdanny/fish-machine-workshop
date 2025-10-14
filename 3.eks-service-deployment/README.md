@@ -88,6 +88,9 @@ aws ecr list-images --repository-name fish-game-server --region ap-northeast-2 2
 echo "✅ 環境檢查完成！"
 ```
 
+![前置條件檢查結果](image/3.1.PNG)
+*圖 3.1：前置條件檢查完成，顯示 EKS 集群和相關服務狀態*
+
 ## 🔍 **你的當前環境狀況**
 
 根據檢查，你的環境已經有以下資源：
@@ -152,6 +155,9 @@ aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS 
 echo "✅ ECR 倉庫檢查完成"
 ```
 
+![ECR 倉庫檢查](image/3.4.ecr-check.PNG)
+*圖 3.4：ECR 倉庫檢查結果，顯示現有的 Docker 鏡像倉庫狀態*
+
 ### Step 2: 構建並推送 Docker 鏡像
 
 ```bash
@@ -199,6 +205,9 @@ kubectl rollout status deployment/game-server-service -n fish-game-system
 
 echo "✅ 所有服務已更新為使用 ECR 鏡像"
 ```
+
+![Deployment 鏡像更新](image/3.5.change-deployment-image-name.PNG)
+*圖 3.5：更新 Deployment 使用 ECR 鏡像，顯示鏡像名稱的修改過程*
 
 ## 🏗️ 完整部署流程（按文件順序）
 
@@ -423,6 +432,9 @@ echo "🌐 NLB 地址: ${NLB_ADDRESS}:8083"
 curl -f http://${NLB_ADDRESS}:8083/health || echo "等待 NLB 完全就緒..."
 ```
 
+![負載均衡器創建過程](image/3.2LoadBalance.PNG)
+*圖 3.2：負載均衡器創建過程，顯示 NLB 和 ALB 的部署狀態*
+
 ### Step 9: 部署 9.ingress.yaml - 創建應用負載均衡器
 
 **🎓 學習重點**：理解 ALB 的路徑路由和 Ingress 配置
@@ -491,6 +503,9 @@ echo "  Client ALB: ${CLIENT_ALB}"
 echo "  API ALB: ${API_ALB}"
 echo "  NLB: ${NLB_ADDRESS}"
 ```
+
+![負載均衡器部署完成](image/3.3LoadBalance-iam-done.PNG)
+*圖 3.3：負載均衡器部署完成，顯示 ALB 和 NLB 的最終狀態和地址*
 
 ### Step 11: 更新 ConfigMap 前端配置
 

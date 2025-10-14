@@ -49,28 +49,34 @@
 
 為了讓 Workshop 參與者不需要手動配置 AWS credentials，我們需要為 EC2 實例設定 IAM Role：
 
-#### 步驟 A: 建立 IAM Role
+#### 步驟 : 建立 IAM Role
 
-1. 在 AWS 控制台進入 **IAM** 服務，點擊左側選單的 **Roles**，然後點擊 **Create role**
+為了簡化 Workshop 設置，我們將創建一個自定義政策：
+   - 點擊 **Create policy**
+   - 選擇 **JSON** 標籤
+   - 貼上以下 JSON 政策：
+   
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": "*",
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+   
+   - 點擊 **Next**，輸入政策名稱：`FishGameWorkshopPolicy`
+   - 點擊 **Create policy**
+   - 回到 Role 創建頁面，搜尋並選擇剛創建的 `FishGameWorkshopPolicy`
 
-![建立 IAM Role](images/1.iam-create-roles.PNG)
-
-2. 選擇 **AWS service** 作為信任實體類型
-
-![選擇 AWS Service](images/2.iam-aws-service.PNG)
-
-3. 選擇 **EC2** 作為使用案例，然後點擊 **Next**
-
-![選擇 EC2 服務](images/3.iam-aws-service.PNG)
-
-4. 搜尋並附加以下權限政策：
-   - ✅ `AmazonEC2ContainerRegistryFullAccess` (ECR 操作)
-   - ✅ `AmazonEKSClusterPolicy` (EKS 叢集管理)
-   - ✅ `AmazonEKSWorkerNodePolicy` (EKS 節點管理)
-   - ✅ `AmazonEKS_CNI_Policy` (網路管理)
-   - ✅ `AmazonS3ReadOnlyAccess` (S3 讀取)
+   > ⚠️ **安全提醒**: 此政策提供完整的 AWS 權限，僅適用於 Workshop 學習環境。在生產環境中，請使用最小權限原則，只授予必要的權限。
 
 ![選擇權限政策](images/4.check.PNG)
+*圖 0.4：選擇剛創建的 FishGameWorkshopPolicy 全權限政策*
 
 5. 點擊 **Next**，輸入 Role 名稱：`FishGameWorkshopRole`，然後點擊 **Create role**
 
@@ -100,7 +106,9 @@
 - **大小**: 100GB (足夠容納所有工具和專案)
 - **類型**: gp3 (較佳效能)
 
-![儲存設定](images/5.storage.PNG)
+![儲存空間設置](images/0.1.storage100.PNG)
+*圖 0.5：設置 100GB 的 EBS 存儲空間*
+
 
 ### 步驟 6: User Data 腳本設定
 
@@ -111,6 +119,7 @@
 3. 複製 `ec2-userdata.sh` 的**完整內容**並貼上
 
 ![User Data 設定](images/6.user-data.PNG)
+*圖 0.7：在 Advanced details 中設置 User Data 腳本*
 
 **📋 User Data 腳本功能：**
 - ✅ 自動安裝 Docker & Docker Compose
@@ -138,6 +147,7 @@
 - **專案位置**: `/home/ubuntu/workshop/fish-game-eks-workshop`
 
 ![VS Code Server 登入畫面](images/7.login-vs-code.PNG)
+*圖 0.8：VS Code Server 登入畫面，使用預設密碼 'password' 登入*
 
 成功登入後，你將看到完整的專案結構，包含所有從 GitHub 下載的微服務程式碼，可以立即開始進行開發和部署工作。
 
@@ -217,39 +227,19 @@ aws configure get region
 ```
 > ap-northeast-2
 
-### 📁 專案結構驗證
+### 📁 專案下載驗證
 
 **進入專案目錄**
 ```bash
 cd /home/ubuntu/workshop/fish-game-eks-workshop
 ```
 
-**檢查專案結構**
+**確認專案已成功下載**
 ```bash
-ls -la
+pwd && ls -la
 ```
-> ```
-> total 12
-> drwxrwxr-x 3 ubuntu ubuntu 4096 Oct 12 06:53 .
-> drwxr-xr-x 6 ubuntu ubuntu 4096 Oct 12 06:53 ..
-> drwxrwxr-x 7 ubuntu ubuntu 4096 Oct 12 06:53 .git
-> ```
 
-**檢查專案內容**
-```bash
-find . -maxdepth 2 -type d
-```
-> ```
-> .
-> ./.git
-> ```
-
-**專案目錄應該包含：**
-- services/ (微服務程式碼)
-- infrastructure/ (基礎設施配置)  
-- scripts/ (腳本工具)
-- docs/ (文檔)
-- README.md (專案說明)
+專案已成功從 GitHub clone 到本地，可以開始進行後續的開發和部署工作。
 
 ## 故障排除
 

@@ -97,6 +97,12 @@ docker-compose up -d
 docker-compose ps
 ```
 
+![Docker Compose 構建](image/1.2.docker-compose-build.PNG)
+*圖 1.2：Docker Compose 構建所有微服務容器*
+
+![Docker Compose 啟動](image/1.3.docker-compose-up.PNG)
+*圖 1.3：Docker Compose 啟動所有服務並檢查狀態*
+
 ### 3. 驗證服務
 ```bash
 # 健康檢查
@@ -186,6 +192,9 @@ chmod +x build-and-push.sh
 # 3. 使用特定標籤
 ./build-and-push.sh v1.0.0
 ```
+
+![Docker 鏡像推送](image/1.4.docker-image-push.PNG)
+*圖 1.4：執行 build-and-push.sh 腳本，將 Docker 鏡像推送到 ECR*
 
 ### ECR 推送流程
 1. **自動創建 ECR 倉庫**：fish-game-client, fish-game-session, fish-game-server
