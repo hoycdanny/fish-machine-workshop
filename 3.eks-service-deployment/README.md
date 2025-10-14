@@ -2,52 +2,6 @@
 
 > **從第二章銜接**：你已經有了 EKS 集群和 Docker 鏡像，現在我們要一步步學習如何把應用部署到 EKS 上！
 
-## 🚀 快速開始
-
-### 一鍵部署
-```bash
-# 添加執行權限（首次使用）
-chmod +x deploy.sh cleanup.sh
-
-# 執行一鍵部署腳本
-./deploy.sh
-```
-
-### 一鍵清除
-```bash
-# 執行一鍵清除腳本
-./cleanup.sh
-```
-
-### 狀態檢查
-```bash
-# 檢查部署狀態
-./status.sh
-```
-
-### 腳本功能說明
-
-#### deploy.sh - 一鍵部署腳本
-- ✅ 自動檢查前置條件（kubectl、EKS 連接、AWS Load Balancer Controller）
-- 🚀 按正確順序部署所有 Kubernetes 資源
-- ⏳ 自動等待負載均衡器創建完成
-- 🔧 自動更新 ConfigMap 配置（修復已知的路由問題）
-- 🔍 驗證部署狀態並提供訪問地址
-
-#### cleanup.sh - 一鍵清除腳本
-- 🛡️ 安全確認機制，防止誤刪
-- 📊 顯示當前資源狀態
-- 🗑️ 按正確順序刪除所有資源（先負載均衡器，後應用）
-- ⏳ 等待 AWS 資源完全刪除
-- ✅ 驗證清除結果
-
-#### status.sh - 狀態檢查腳本
-- 📊 檢查所有 Pod、Service、Ingress 狀態
-- 🔍 驗證 ConfigMap 配置是否正確
-- 🏥 測試服務健康檢查端點
-- 🌐 顯示訪問地址和測試命令
-- 📋 查看最近的 Kubernetes 事件
-
 ## 🎯 本章學習目標
 
 通過本章學習，你將掌握：
@@ -87,9 +41,6 @@ aws ecr list-images --repository-name fish-game-server --region ap-northeast-2 2
 
 echo "✅ 環境檢查完成！"
 ```
-
-![前置條件檢查結果](image/3.1.PNG)
-*圖 3.1：前置條件檢查完成，顯示 EKS 集群和相關服務狀態*
 
 ## 🔍 **你的當前環境狀況**
 
@@ -155,9 +106,6 @@ aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS 
 echo "✅ ECR 倉庫檢查完成"
 ```
 
-![ECR 倉庫檢查](image/3.4.ecr-check.PNG)
-*圖 3.4：ECR 倉庫檢查結果，顯示現有的 Docker 鏡像倉庫狀態*
-
 ### Step 2: 構建並推送 Docker 鏡像
 
 ```bash
@@ -205,9 +153,6 @@ kubectl rollout status deployment/game-server-service -n fish-game-system
 
 echo "✅ 所有服務已更新為使用 ECR 鏡像"
 ```
-
-![Deployment 鏡像更新](image/3.5.change-deployment-image-name.PNG)
-*圖 3.5：更新 Deployment 使用 ECR 鏡像，顯示鏡像名稱的修改過程*
 
 ## 🏗️ 完整部署流程（按文件順序）
 
@@ -432,9 +377,6 @@ echo "🌐 NLB 地址: ${NLB_ADDRESS}:8083"
 curl -f http://${NLB_ADDRESS}:8083/health || echo "等待 NLB 完全就緒..."
 ```
 
-![負載均衡器創建過程](image/3.2LoadBalance.PNG)
-*圖 3.2：負載均衡器創建過程，顯示 NLB 和 ALB 的部署狀態*
-
 ### Step 9: 部署 9.ingress.yaml - 創建應用負載均衡器
 
 **🎓 學習重點**：理解 ALB 的路徑路由和 Ingress 配置
@@ -503,9 +445,6 @@ echo "  Client ALB: ${CLIENT_ALB}"
 echo "  API ALB: ${API_ALB}"
 echo "  NLB: ${NLB_ADDRESS}"
 ```
-
-![負載均衡器部署完成](image/3.3LoadBalance-iam-done.PNG)
-*圖 3.3：負載均衡器部署完成，顯示 ALB 和 NLB 的最終狀態和地址*
 
 ### Step 11: 更新 ConfigMap 前端配置
 
@@ -602,8 +541,8 @@ curl -I http://${NLB_ADDRESS}:8083/health
 ```mermaid
 graph TB
     subgraph "玩家端"
-        Player["🎮 玩家瀏覽器"]
-        Admin["👤 管理員"]
+        Player["玩家瀏覽器"]
+        Admin["管理員"]
     end
     
     subgraph "AWS 負載均衡層"
@@ -671,58 +610,9 @@ echo "   game-server-service → game-session-service (錢包操作)"
 
 ## 🔧 故障排除指南
 
-### 已知問題和解決方案
-
-#### 1. ConfigMap 配置問題
-
-**問題現象**：前端無法正確連接到 API 服務，出現 `{"success":false,"message":"找不到請求的資源"}` 錯誤
-
-**根本原因**：
-- ConfigMap 中的 `FRONTEND_SESSION_URL` 配置了多餘的 `/api` 路徑
-- 前端代碼已經包含 `/api/v1/users/register` 路徑，不需要在環境變數中重複
-
-**解決方案**：
-```bash
-# 獲取當前的 ALB 地址
-API_ALB=$(kubectl get ingress api-ingress -n fish-game-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-NLB_ADDRESS=$(kubectl get service game-server-nlb -n fish-game-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-
-# 修正 ConfigMap - 移除多餘的 /api
-kubectl patch configmap fish-game-config -n fish-game-system --patch "
-data:
-  FRONTEND_SESSION_URL: \"http://${API_ALB}\"
-  FRONTEND_GAME_URL: \"http://${NLB_ADDRESS}:8083\"
-"
-
-# 重啟服務使配置生效
-kubectl rollout restart deployment/client-service -n fish-game-system
-kubectl rollout restart deployment/game-session-service -n fish-game-system
-
-# 等待重啟完成
-kubectl rollout status deployment/client-service -n fish-game-system
-kubectl rollout status deployment/game-session-service -n fish-game-system
-```
-
-**驗證修復**：
-```bash
-# 檢查 ConfigMap 配置
-kubectl get configmap fish-game-config -n fish-game-system -o yaml | grep FRONTEND
-
-# 測試 API 端點
-API_ALB=$(kubectl get ingress api-ingress -n fish-game-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-curl -v http://${API_ALB}/api/health  # 應該返回 200 OK
-curl -v http://${API_ALB}/health      # 應該返回 404（正常，因為沒有這個路由）
-```
-
-#### 2. Ingress 路由配置問題
-
-**問題現象**：ALB 創建後出現 `Failed build model due to ingress: unknown action type: rewrite-path` 警告
-
-**解決方案**：確保 Ingress 配置使用正確的 annotation 格式，避免使用不支持的 rewrite-path 動作
-
 ### 常見問題診斷
 
-#### 3. Pod 無法啟動
+#### 1. Pod 無法啟動
 
 ```bash
 # 檢查 Pod 狀態
@@ -817,157 +707,8 @@ kubectl get events -n fish-game-system --sort-by='.lastTimestamp' | tail -5
 - 🔒 **安全加固**：RBAC、Network Policy、Pod Security
 - 🔄 **CI/CD 流水線**：自動化部署和更新
 
-## 📝 部署最佳實踐和經驗總結
-
-### 🔧 配置管理最佳實踐
-
-#### ConfigMap 配置要點
-```bash
-# ✅ 正確的前端 URL 配置
-FRONTEND_SESSION_URL: "http://your-api-alb-address"        # 不要加 /api
-FRONTEND_GAME_URL: "http://your-nlb-address:8083"
-
-# ❌ 錯誤的配置（會導致 404 錯誤）
-FRONTEND_SESSION_URL: "http://your-api-alb-address/api"    # 多餘的 /api
-```
-
-**原因說明**：
-- 前端代碼中已經包含完整的 API 路徑（如 `/api/v1/users/register`）
-- 環境變數只需要提供基礎 URL，不需要包含路徑前綴
-- 重複的路徑會導致請求發送到錯誤的端點
-
-#### 負載均衡器配置要點
-```yaml
-# ALB 適用場景
-- HTTP/HTTPS 流量
-- 基於路徑的路由
-- SSL 終止
-- 成本較低
-
-# NLB 適用場景  
-- TCP/UDP 流量
-- WebSocket 長連接
-- 極低延遲要求
-- 保持客戶端真實 IP
-```
-
-### 🚀 部署順序重要性
-
-正確的部署順序可以避免依賴問題：
-
-1. **基礎設施層**：Namespace → ConfigMap
-2. **數據層**：Redis（其他服務依賴）
-3. **應用層**：Client → Session → Server（按依賴關係）
-4. **網絡層**：Services → NLB → Ingress（ALB）
-5. **配置更新**：更新 ConfigMap → 重啟服務
-
-### 🔍 故障排除經驗
-
-#### 常見錯誤模式
-```bash
-# 1. 檢查 Pod 狀態
-kubectl get pods -n fish-game-system
-# 關注：ImagePullBackOff, CrashLoopBackOff, Pending
-
-# 2. 檢查服務端點
-kubectl get endpoints -n fish-game-system
-# 確保每個 Service 都有對應的 Endpoints
-
-# 3. 檢查負載均衡器
-kubectl describe ingress -n fish-game-system
-kubectl describe service game-server-nlb -n fish-game-system
-# 關注：Events 部分的錯誤信息
-
-# 4. 測試內部連通性
-kubectl exec -n fish-game-system deployment/client-service -- \
-  curl -s http://game-session-service:8082/health
-```
-
-#### 日誌分析技巧
-```bash
-# 查看應用日誌
-kubectl logs -l app=game-session-service -n fish-game-system --tail=50
-
-# 查看 AWS Load Balancer Controller 日誌
-kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
-
-# 實時監控事件
-kubectl get events -n fish-game-system --watch
-```
-
-### 📊 監控和維護
-
-#### 健康檢查端點
-```bash
-# API 服務健康檢查
-curl http://your-api-alb/api/health
-
-# 遊戲服務健康檢查  
-curl http://your-nlb:8083/health
-
-# 前端頁面檢查
-curl -I http://your-client-alb/
-```
-
-#### 資源使用監控
-```bash
-# 查看資源使用情況
-kubectl top pods -n fish-game-system
-kubectl top nodes
-
-# 查看 Pod 資源限制
-kubectl describe pods -n fish-game-system | grep -A 5 "Limits\|Requests"
-```
-
-### 🔒 安全考慮
-
-#### 生產環境建議
-- 使用 HTTPS（配置 SSL 證書）
-- 設置適當的資源限制
-- 配置 Network Policy 限制 Pod 間通信
-- 使用 RBAC 控制訪問權限
-- 定期更新容器鏡像
-
-#### 成本優化
-- 根據實際負載調整副本數量
-- 使用 Spot 實例降低成本
-- 配置 Horizontal Pod Autoscaler (HPA)
-- 監控和優化資源使用
-
 ---
 
 **🎮 恭喜！你已經成功將魚機遊戲部署到 AWS EKS 生產環境！**
 
 現在你可以邀請朋友通過瀏覽器訪問你的遊戲，體驗雲原生微服務架構的強大功能！
-
-**🛠️ 快速命令參考**：
-```bash
-# 添加執行權限（首次使用）
-chmod +x deploy.sh cleanup.sh status.sh
-
-# 一鍵部署
-./deploy.sh
-
-# 檢查狀態
-./status.sh
-
-# 一鍵清除
-./cleanup.sh
-
-# 手動查看狀態
-kubectl get all -n fish-game-system
-
-# 獲取訪問地址
-kubectl get ingress -n fish-game-system
-kubectl get service game-server-nlb -n fish-game-system
-
-# 查看日誌
-kubectl logs -l app=game-session-service -n fish-game-system --tail=20
-kubectl logs -l app=game-server-service -n fish-game-system --tail=20
-
-# 測試健康檢查
-API_ALB=$(kubectl get ingress api-ingress -n fish-game-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-NLB=$(kubectl get service game-server-nlb -n fish-game-system -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-curl http://${API_ALB}/api/health
-curl http://${NLB}:8083/health
-```

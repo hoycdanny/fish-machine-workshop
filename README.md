@@ -47,15 +47,15 @@
 ```mermaid
 graph TB
     subgraph "用戶端"
-        Browser["🌐 瀏覽器用戶"]
-        LocalHTML["💻 本地 HTML 客戶端"]
-        Admin["👤 系統管理員"]
+        Browser["瀏覽器用戶"]
+        LocalHTML["本地 HTML 客戶端"]
+        Admin["系統管理員"]
     end
     
     subgraph "AWS 負載均衡層"
-        ALB1["ALB-1<br/>📁 靜態資源<br/>80, 443 → 8081"]
-        ALB2["ALB-2<br/>🔗 API 服務<br/>80, 443 → 8082"]
-        NLB["NLB<br/>🐟 WebSocket TCP<br/>8083"]
+        ALB1["ALB-1<br/>靜態資源<br/>80, 443 to 8081"]
+        ALB2["ALB-2<br/>API 服務<br/>80, 443 to 8082"]
+        NLB["NLB<br/>WebSocket TCP<br/>8083"]
     end
     
     subgraph "EKS 集群 - fish-game-system"
@@ -85,7 +85,7 @@ graph TB
     
     SessionSvc --> Redis
     ServerSvc --> Redis
-    ServerSvc -.->|內部 API 調用<br/>錢包操作| SessionSvc
+    ServerSvc -.->|內部 API 調用錢包操作| SessionSvc
     
     classDef clientStyle fill:#e8f5e8,stroke:#2e7d32,stroke-width:2px
     classDef lbStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:3px

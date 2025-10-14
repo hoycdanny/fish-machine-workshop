@@ -1,4 +1,4 @@
-# EKS 叢集設置
+# 第二章：EKS 叢集設置
 
 本目錄包含將魚機遊戲微服務部署到 Amazon EKS 的所有配置和腳本。
 
@@ -14,9 +14,6 @@
 ## 部署步驟
 
 1. **EKS 叢集創建**: 使用 `one-click-cmd.sh` 創建 EKS 叢集
-2. **Kubernetes 配置**: 應用 `k8s-manifests/` 中的配置文件
-3. **服務驗證**: 驗證所有服務正常運行
-
 
 
 ## 前置條件
@@ -32,24 +29,16 @@
    ```bash
    ./one-click-cmd.sh
    ```
+![EKS 部署完成驗證](image/2.eks-deploy-done.PNG)
+*圖 2.3：EKS 部署完成驗證，顯示所有服務和 Pod 的運行狀態*
+
+2. 驗證叢集狀態：
+   ```bash
+   kubectl get nodes
+   kubectl get pods --all-namespaces
+   ```
+
 
 ![EKS 集群創建過程](image/1.cluster-done.PNG)
 *圖 2.1：EKS 集群創建過程，顯示 eksctl 創建集群的詳細步驟*
 
-![EKS 集群創建完成](image/2.cluster-done.PNG)
-*圖 2.2：EKS 集群創建完成，顯示集群狀態和節點信息*
-
-2. 驗證部署：
-   ```bash
-   # 檢查集群狀態
-   kubectl get nodes
-   
-   # 檢查所有 Pod 狀態
-   kubectl get pods -A
-   
-   # 檢查服務狀態
-   kubectl get services -A
-   ```
-
-![EKS 部署完成驗證](image/2.eks-deploy-done.PNG)
-*圖 2.3：EKS 部署完成驗證，顯示所有服務和 Pod 的運行狀態*

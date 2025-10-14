@@ -1,4 +1,4 @@
-# 🐟 Chapter 1: 服務驗證和容器化
+# 第一章： 服務驗證和容器化
 
 > **微服務架構設計 + Docker 容器化 + EKS 無縫遷移**
 
@@ -16,22 +16,22 @@
 ```mermaid
 graph TB
     subgraph "瀏覽器層"
-        Browser[瀏覽器<br/>http://your-ip:8081]
+        Browser["瀏覽器<br/>http://your-ip:8081"]
     end
     
     subgraph "Docker Compose 網路"
-        CS[Client Service<br/>:8081]
-        GSS[Game Session Service<br/>:8082]
-        GS[Game Server Service<br/>:8083]
-        Redis[Redis<br/>:6379]
+        CS["Client Service<br/>:8081"]
+        GSS["Game Session Service<br/>:8082"]
+        GS["Game Server Service<br/>:8083"]
+        Redis["Redis<br/>:6379"]
     end
     
     Browser --> CS
-    CS -.內部通信.-> GSS
-    CS -.內部通信.-> GS
+    CS -.->|內部通信| GSS
+    CS -.->|內部通信| GS
     GSS --> Redis
     GS --> Redis
-    GS -.WebSocket.-> CS
+    GS -.->|WebSocket| CS
 ```
 
 ## 📦 服務配置架構
@@ -96,12 +96,6 @@ docker-compose up -d
 # 檢查服務狀態
 docker-compose ps
 ```
-
-![Docker Compose 構建](image/1.2.docker-compose-build.PNG)
-*圖 1.2：Docker Compose 構建所有微服務容器*
-
-![Docker Compose 啟動](image/1.3.docker-compose-up.PNG)
-*圖 1.3：Docker Compose 啟動所有服務並檢查狀態*
 
 ### 3. 驗證服務
 ```bash
@@ -192,9 +186,6 @@ chmod +x build-and-push.sh
 # 3. 使用特定標籤
 ./build-and-push.sh v1.0.0
 ```
-
-![Docker 鏡像推送](image/1.4.docker-image-push.PNG)
-*圖 1.4：執行 build-and-push.sh 腳本，將 Docker 鏡像推送到 ECR*
 
 ### ECR 推送流程
 1. **自動創建 ECR 倉庫**：fish-game-client, fish-game-session, fish-game-server

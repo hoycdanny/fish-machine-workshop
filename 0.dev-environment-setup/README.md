@@ -1,4 +1,4 @@
-# Chapter 0: 開發環境設定
+# 第零章： 開發環境設定
 
 ## 概述
 
@@ -49,56 +49,36 @@
 
 為了讓 Workshop 參與者不需要手動配置 AWS credentials，我們需要為 EC2 實例設定 IAM Role：
 
-#### 步驟 : 建立 IAM Role
+#### 步驟 A: 建立 IAM Role
 
 為了簡化 Workshop 設置，我們將創建一個自定義政策：
-   - 點擊 **Create policy**
-   - 選擇 **JSON** 標籤
-   - 貼上以下 JSON 政策：
-   
-   ```json
-   {
-     "Version": "2012-10-17",
-     "Statement": [
-       {
-         "Effect": "Allow",
-         "Action": "*",
-         "Resource": "*"
-       }
-     ]
-   }
-   ```
-   
-   - 點擊 **Next**，輸入政策名稱：`FishGameWorkshopPolicy`
-   - 點擊 **Create policy**
-   - 回到 Role 創建頁面，搜尋並選擇剛創建的 `FishGameWorkshopPolicy`
 
-   > ⚠️ **安全提醒**: 此政策提供完整的 AWS 權限，僅適用於 Workshop 學習環境。在生產環境中，請使用最小權限原則，只授予必要的權限。
+1. 在 AWS 控制台進入 **IAM** 服務，點擊左側選單的 **Policies**，然後點擊 **Create policy**
 
-![選擇權限政策](images/4.check.PNG)
-*圖 0.4：選擇剛創建的 FishGameWorkshopPolicy 全權限政策*
+2. 選擇 **JSON** 標籤
 
-5. 點擊 **Next**，輸入 Role 名稱：`FishGameWorkshopRole`，然後點擊 **Create role**
+3. 貼上以下 JSON 政策：
 
-#### 步驟 B: 將 IAM Role 附加到 EC2 實例
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "*",
+      "Resource": "*"
+    }
+  ]
+}
+```
 
-**方法 1: 在建立 EC2 時附加（推薦）**
-1. 在 EC2 建立流程的 **Advanced details** 區段
-2. 找到 **IAM instance profile** 下拉選單
-3. 選擇剛才建立的 `FishGameWorkshopRole`
+4. 點擊 **Next**，輸入政策名稱：`FishGameWorkshopPolicy`
 
-![在 EC2 建立時附加 IAM Role](images/4.iam-roles-ec2.PNG)
+5. 點擊 **Create policy**
 
-**方法 2: 為現有 EC2 實例附加**
-1. 在 EC2 控制台選擇你的實例
-2. 點擊 **Actions** → **Security** → **Modify IAM role**
+6. 搜尋並選擇剛創建的 `FishGameWorkshopPolicy`
 
-![修改現有 EC2 的 IAM Role](images/4.edit-iam-roles.PNG)
 
-3. 選擇 `FishGameWorkshopRole`
-4. 點擊 **Update IAM role**
-
-設定完成後，EC2 實例就會自動擁有 AWS 權限，不需要手動配置 credentials！
 
 ### 步驟 5: 儲存空間配置
 
@@ -106,9 +86,7 @@
 - **大小**: 100GB (足夠容納所有工具和專案)
 - **類型**: gp3 (較佳效能)
 
-![儲存空間設置](images/0.1.storage100.PNG)
-*圖 0.5：設置 100GB 的 EBS 存儲空間*
-
+![儲存設定](images/5.storage.PNG)
 
 ### 步驟 6: User Data 腳本設定
 
@@ -119,7 +97,6 @@
 3. 複製 `ec2-userdata.sh` 的**完整內容**並貼上
 
 ![User Data 設定](images/6.user-data.PNG)
-*圖 0.7：在 Advanced details 中設置 User Data 腳本*
 
 **📋 User Data 腳本功能：**
 - ✅ 自動安裝 Docker & Docker Compose
@@ -147,7 +124,6 @@
 - **專案位置**: `/home/ubuntu/workshop/fish-game-eks-workshop`
 
 ![VS Code Server 登入畫面](images/7.login-vs-code.PNG)
-*圖 0.8：VS Code Server 登入畫面，使用預設密碼 'password' 登入*
 
 成功登入後，你將看到完整的專案結構，包含所有從 GitHub 下載的微服務程式碼，可以立即開始進行開發和部署工作。
 
@@ -226,35 +202,6 @@ aws configure list
 aws configure get region
 ```
 > ap-northeast-2
-
-### 📁 專案下載驗證
-
-**進入專案目錄**
-```bash
-cd /home/ubuntu/workshop/fish-game-eks-workshop
-```
-
-**確認專案已成功下載**
-```bash
-pwd && ls -la
-```
-
-專案已成功從 GitHub clone 到本地，可以開始進行後續的開發和部署工作。
-
-## 故障排除
-
-如果遇到問題，可以 SSH 連接到 EC2 檢查：
-
-```bash
-# 檢查 User Data 執行日誌
-sudo tail -f /var/log/cloud-init-output.log
-
-# 檢查 VS Code Server 狀態
-sudo systemctl status code-server@ubuntu
-
-# 檢查 Docker 狀態
-sudo systemctl status docker
-```
 
 ## 下一步
 
