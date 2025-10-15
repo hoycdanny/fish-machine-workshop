@@ -62,3 +62,6 @@ coverage/
 
 # 排除文檔
 Runbook_v1.1.docx.pdf
+
+# History extension
+.history
