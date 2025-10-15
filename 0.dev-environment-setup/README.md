@@ -22,6 +22,7 @@
 ### 步驟 3: 設定實例名稱和作業系統
 
 **實例配置建議：**
+
 - **名稱**: `fish-game-workshop` 或你喜歡的名稱
 - **作業系統**: Ubuntu 22.04 LTS (推薦)
 - **實例類型**: t3.medium (2 vCPU, 4GB RAM)
@@ -31,64 +32,61 @@
 ### 步驟 4: 網路設定
 
 **重要網路配置：**
+
 - ✅ **允許來自網際網路的 HTTPS 流量**
-- ✅ **允許來自網際網路的 HTTP 流量** 
+- ✅ **允許來自網際網路的 HTTP 流量**
 - ✅ **允許 SSH 流量**
 - 🔧 **編輯安全群組** - 需要額外開放端口 8080 (VS Code Server)
 
 ![網路設定](images/4.network.PNG)
 
 **安全群組端口設定：**
+
 - 22 (SSH)
-- 80 (HTTP) 
+- 80 (HTTP)
 - 443 (HTTPS)
 - 8080 (VS Code Server)
 - 8080-8083 (開發端口範圍)
 
-**IAM Role 設定（重要）：**
-
-為了讓 Workshop 參與者不需要手動配置 AWS credentials，我們需要為 EC2 實例設定 IAM Role：
-
-#### 步驟 A: 建立 IAM Role
-
-為了簡化 Workshop 設置，我們將創建一個自定義政策：
-
-1. 在 AWS 控制台進入 **IAM** 服務，點擊左側選單的 **Policies**，然後點擊 **Create policy**
-
-2. 選擇 **JSON** 標籤
-
-3. 貼上以下 JSON 政策：
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "*",
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-4. 點擊 **Next**，輸入政策名稱：`FishGameWorkshopPolicy`
-
-5. 點擊 **Create policy**
-
-6. 搜尋並選擇剛創建的 `FishGameWorkshopPolicy`
-
-
-
 ### 步驟 5: 儲存空間配置
 
 **建議儲存配置：**
+
 - **大小**: 100GB (足夠容納所有工具和專案)
 - **類型**: gp3 (較佳效能)
 
 ![儲存設定](images/5.storage.PNG)
 
-### 步驟 6: User Data 腳本設定
+### 步驟 6: IAM 執行個體設定檔配置
+
+為了讓 Workshop 參與者不需要手動配置 AWS credentials，我們需要為 EC2 實例設定 IAM Role：
+
+#### 步驟 A: 建立 IAM Role
+
+1. 展開 **Advanced details** 區段
+2. 找到 **IAM 執行個體設定檔** 文字
+3. 點擊 **建立新的 IAM 描述檔** 並開啟新分頁
+
+![實例設定檔](images/6.instnace-role.png)
+
+我們將創建一個 EC2 Instance 角色：
+
+1. 點擊 **建立角色**
+2. 使用案例選擇 `EC2` ，並點擊 **下一步**
+3. 勾選 `AdministratorAccess`，並點擊 **下一步**
+4. 輸入角色名稱: `FishGameWorkshopRole`，並點擊 **建立角色**
+
+![建立實例角色](images/6.create-instance-role.png)
+
+#### 步驟 B: 選擇剛剛建立的角色
+
+1. 回到先前 **建立 EC2 Instance** 分頁
+2. 點擊 **重新整理 IAM 執行個體設定檔 Icon**
+3. 選擇剛剛建立的 `FishGameWorkshopRole`
+
+![選擇實例角色](images/6.select-instance-role.png)
+
+### 步驟 7: User Data 腳本設定
 
 這是最關鍵的步驟！在「Advanced details」→「User data」中：
 
@@ -99,21 +97,20 @@
 ![User Data 設定](images/6.user-data.PNG)
 
 **📋 User Data 腳本功能：**
+
 - ✅ 自動安裝 Docker & Docker Compose
-- ✅ 自動安裝 AWS CLI v2  
+- ✅ 自動安裝 AWS CLI v2
 - ✅ 自動安裝 kubectl, eksctl, Helm
 - ✅ 自動安裝 VS Code Server (端口 8080)
 - ✅ 自動 Clone 專案程式碼: `https://github.com/hoycdanny/fish-machine-workshop`
 - ✅ 自動設定完整的開發環境
 
-### 步驟 7: 啟動實例
+### 步驟 8: 啟動實例
 
 1. 檢查所有設定無誤
 2. 點擊「Launch instance」
 3. 等待實例啟動（約 2-3 分鐘）
 4. 等待 User Data 腳本執行完成（約 10-15 分鐘）
-
-
 
 ## 設定完成後的訪問方式
 
@@ -134,73 +131,91 @@
 ### 🔧 工具版本檢查
 
 **檢查 Docker 版本**
+
 ```bash
 docker --version
 ```
+
 > Docker version 28.5.1, build e180ab8
 
 **檢查 Docker Compose 版本**
+
 ```bash
 docker-compose --version
 ```
+
 > Docker Compose version v2.40.0
 
 **檢查 AWS CLI 版本**
+
 ```bash
 aws --version
 ```
+
 > aws-cli/2.31.13 Python/3.13.7 Linux/6.8.0-1035-aws exe/x86_64.ubuntu.22
 
 **檢查 kubectl 版本**
+
 ```bash
 kubectl version --client
 ```
+
 > Client Version: v1.34.1  
 > Kustomize Version: v5.7.1
 
 **檢查 eksctl 版本**
+
 ```bash
 eksctl version
 ```
+
 > 0.215.0
 
 **檢查 Helm 版本**
+
 ```bash
 helm version
 ```
+
 > version.BuildInfo{Version:"v3.19.0", GitCommit:"3d8990f0836691f0229297773f3524598f46bda6", GitTreeState:"clean", GoVersion:"go1.24.7"}
 
 ### 🔐 AWS 權限驗證
 
 **檢查 AWS 身份**
+
 ```bash
 aws sts get-caller-identity
 ```
+
 > ```json
 > {
->     "UserId": "AROA5YW5LRDK7P4DLTGRP:i-0***f49deb08bf***",
->     "Account": "9464*****461",
->     "Arn": "arn:aws:sts::9464*****461:assumed-role/FishGameWorkshopRole/i-0***f49deb08bf***"
+>   "UserId": "AROA5YW5LRDK7P4DLTGRP:i-0***f49deb08bf***",
+>   "Account": "9464*****461",
+>   "Arn": "arn:aws:sts::9464*****461:assumed-role/FishGameWorkshopRole/i-0***f49deb08bf***"
 > }
 > ```
 
 **檢查 AWS 配置**
+
 ```bash
 aws configure list
 ```
+
 > ```
 >       NAME                    VALUE             TYPE    LOCATION
 >       ----                    -----             ----    --------
 >    profile                <not set>             None    None
-> access_key     ****************D5CM         iam-role    
-> secret_key     ****************rgvq         iam-role    
+> access_key     ****************D5CM         iam-role
+> secret_key     ****************rgvq         iam-role
 >     region           ap-northeast-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
 > ```
 
 **檢查預設區域**
+
 ```bash
 aws configure get region
 ```
+
 > ap-northeast-2
 
 ## 下一步
