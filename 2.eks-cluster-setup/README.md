@@ -98,7 +98,7 @@ kubectl get deployment -n kube-system metrics-server
 # 驗證 EKS 集群標籤
 aws eks describe-cluster \
   --name fish-game-cluster \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query 'cluster.tags'
 
 # 預期輸出
@@ -123,7 +123,7 @@ aws resourcegroupstaggingapi get-resources \
 | 項目 | 配置 |
 |------|------|
 | **集群名稱** | `fish-game-cluster` |
-| **區域** | `ap-northeast-2` (Seoul) |
+| **區域** | `us-east-1` (Seoul) |
 | **Kubernetes 版本** | 最新穩定版 |
 | **節點類型** | t3.medium (2 vCPU, 4GB RAM) |
 | **節點數量** | 3 (最小 1，最大 4) |
@@ -156,12 +156,12 @@ aws resourcegroupstaggingapi get-resources \
 # 列出日誌群組
 aws logs describe-log-groups \
   --log-group-name-prefix /aws/containerinsights/fish-game-cluster \
-  --region ap-northeast-2
+  --region us-east-1
 
 # 查看應用日誌
 aws logs tail /aws/containerinsights/fish-game-cluster/application \
   --follow \
-  --region ap-northeast-2
+  --region us-east-1
 ```
 
 ## 🔍 故障排除
@@ -170,10 +170,10 @@ aws logs tail /aws/containerinsights/fish-game-cluster/application \
 
 ```bash
 # 檢查 eksctl 日誌
-eksctl utils describe-stacks --cluster fish-game-cluster --region ap-northeast-2
+eksctl utils describe-stacks --cluster fish-game-cluster --region us-east-1
 
 # 刪除失敗的集群
-eksctl delete cluster --name fish-game-cluster --region ap-northeast-2
+eksctl delete cluster --name fish-game-cluster --region us-east-1
 ```
 
 ### Load Balancer Controller 未運行
@@ -214,12 +214,12 @@ kubectl get serviceaccount cloudwatch-agent -n amazon-cloudwatch -o yaml
 # 驗證日誌收集（等待 5-10 分鐘後）
 aws logs describe-log-groups \
   --log-group-name-prefix /aws/containerinsights/fish-game-cluster \
-  --region ap-northeast-2
+  --region us-east-1
 
 # 查看實時日誌
 aws logs tail /aws/containerinsights/fish-game-cluster/application \
   --follow \
-  --region ap-northeast-2
+  --region us-east-1
 ```
 
 ## 🧹 清理資源
@@ -228,7 +228,7 @@ aws logs tail /aws/containerinsights/fish-game-cluster/application \
 
 ```bash
 # 刪除 EKS 集群（會自動刪除所有相關資源）
-eksctl delete cluster --name fish-game-cluster --region ap-northeast-2
+eksctl delete cluster --name fish-game-cluster --region us-east-1
 
 # 手動刪除 IAM 政策（如果需要）
 aws iam delete-policy \

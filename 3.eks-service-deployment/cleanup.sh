@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 # 配置
 CLUSTER_NAME="fish-game-cluster"
-REGION="ap-northeast-2"
+REGION="us-east-1"
 ECR_REPOS=("fish-game-client" "fish-game-session" "fish-game-server")
 
 # 日誌函數

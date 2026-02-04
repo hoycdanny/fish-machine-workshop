@@ -65,12 +65,12 @@ kubectl get ingress -n fish-game-system
 
 # ✅ 檢查 ECR 鏡像
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-aws ecr describe-repositories --region ap-northeast-2
+aws ecr describe-repositories --region us-east-1
 
 # 檢查各倉庫的鏡像
-aws ecr list-images --repository-name fish-game-client --region ap-northeast-2
-aws ecr list-images --repository-name fish-game-session --region ap-northeast-2 2>/dev/null || echo "fish-game-session 倉庫不存在"
-aws ecr list-images --repository-name fish-game-server --region ap-northeast-2 2>/dev/null || echo "fish-game-server 倉庫不存在"
+aws ecr list-images --repository-name fish-game-client --region us-east-1
+aws ecr list-images --repository-name fish-game-session --region us-east-1 2>/dev/null || echo "fish-game-session 倉庫不存在"
+aws ecr list-images --repository-name fish-game-server --region us-east-1 2>/dev/null || echo "fish-game-server 倉庫不存在"
 
 echo "✅ 環境檢查完成！"
 ```
@@ -254,7 +254,7 @@ deployment 文件中的鏡像地址使用模板格式，需要替換為你的實
 ```bash
 # 設置環境變數
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AWS_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}
+export AWS_REGION=${AWS_DEFAULT_REGION:-us-east-1}
 
 echo "🔄 更新 deployment 文件中的鏡像地址..."
 echo "Account ID: ${AWS_ACCOUNT_ID}"
@@ -262,15 +262,15 @@ echo "Region: ${AWS_REGION}"
 
 # 更新 client-deployment.yaml
 sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/4.client-deployment.yaml
-sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/4.client-deployment.yaml
+sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/4.client-deployment.yaml
 
 # 更新 session-deployment.yaml  
 sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/5.session-deployment.yaml
-sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/5.session-deployment.yaml
+sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/5.session-deployment.yaml
 
 # 更新 server-deployment.yaml
 sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/6.server-deployment.yaml
-sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/6.server-deployment.yaml
+sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/6.server-deployment.yaml
 
 echo "✅ 鏡像地址更新完成！"
 
@@ -294,10 +294,10 @@ grep "image:" k8s-manifests/6.server-deployment.yaml | grep -v "#" | sed 's/^[ \
 **更新範例：**
 ```yaml
 # 更新前（模板格式）
-image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client
+image: <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/fish-game-client
 
 # 更新後（實際地址，假設 Account ID 是 123456789012）
-image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest
+image: 123456789012.dkr.ecr.us-east-1.amazonaws.com/fish-game-client:latest
 ```
 
 **💡 為什麼需要這個步驟？**
@@ -791,7 +791,7 @@ kubectl describe ingress <ingress-name> -n fish-game-system
 kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
 
 # 檢查 AWS 控制台中的負載均衡器狀態
-aws elbv2 describe-load-balancers --region ap-northeast-2
+aws elbv2 describe-load-balancers --region us-east-1
 ```
 
 ### 實用診斷命令
@@ -925,7 +925,7 @@ kubectl get deployment -n kube-system aws-load-balancer-controller
 kubectl logs -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
 
 # 手動檢查 AWS 控制台
-aws elbv2 describe-load-balancers --region ap-northeast-2
+aws elbv2 describe-load-balancers --region us-east-1
 ```
 
 **3. 服務健康檢查失敗**
@@ -941,7 +941,7 @@ kubectl get endpoints -n fish-game-system
 ```bash
 # 手動檢查殘留資源
 kubectl get all -n fish-game-system
-aws elbv2 describe-load-balancers --region ap-northeast-2
+aws elbv2 describe-load-balancers --region us-east-1
 
 # 強制刪除命名空間（如果卡住）
 kubectl delete namespace fish-game-system --force --grace-period=0
@@ -984,13 +984,13 @@ echo "🏷️  檢查 AWS 負載均衡器標籤..."
 
 # 列出所有相關的負載均衡器
 aws elbv2 describe-load-balancers \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].[LoadBalancerName,LoadBalancerArn]" \
   --output table
 
 # 檢查特定負載均衡器的標籤
 ALB_ARN=$(aws elbv2 describe-load-balancers \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" \
   --output text | head -1)
 
@@ -1016,7 +1016,7 @@ fi
 # 查詢所有標記為本章創建的資源
 aws resourcegroupstaggingapi get-resources \
   --tag-filters Key=Project,Values=fish-machine-workshop Key=ManagedBy,Values=3.eks-service-deployment/deploy.sh \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query 'ResourceTagMappingList[].[ResourceARN]' \
   --output table
 
@@ -1142,17 +1142,17 @@ kubectl delete -f k8s-manifests/1.namespace.yaml
 
 ```bash
 # 檢查 EKS 集群
-aws eks describe-cluster --name fish-game-cluster --region ap-northeast-2
+aws eks describe-cluster --name fish-game-cluster --region us-east-1
 # 應該返回：ResourceNotFoundException
 
 # 檢查 ECR 倉庫
-aws ecr describe-repositories --region ap-northeast-2 | grep fish-game
+aws ecr describe-repositories --region us-east-1 | grep fish-game
 # 應該沒有輸出
 
 # 檢查 CloudWatch 日誌
 aws logs describe-log-groups \
   --log-group-name-prefix /aws/containerinsights/fish-game-cluster \
-  --region ap-northeast-2
+  --region us-east-1
 # 應該沒有輸出
 ```
 

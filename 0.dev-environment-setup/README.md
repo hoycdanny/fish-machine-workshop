@@ -207,7 +207,7 @@ aws configure list
 >    profile                <not set>             None    None
 > access_key     ****************D5CM         iam-role
 > secret_key     ****************rgvq         iam-role
->     region           ap-northeast-2              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
+>     region           us-east-1              env    ['AWS_REGION', 'AWS_DEFAULT_REGION']
 > ```
 
 **檢查預設區域**
@@ -216,7 +216,7 @@ aws configure list
 aws configure get region
 ```
 
-> ap-northeast-2
+> us-east-1
 
 ## 下一步
 

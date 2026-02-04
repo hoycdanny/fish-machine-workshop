@@ -29,7 +29,7 @@ aws sts get-caller-identity
 
 ```bash
 # 檢查 ECR 倉庫
-aws ecr describe-repositories --region ap-northeast-2 --query 'repositories[?contains(repositoryName, `fish-game`)].repositoryName'
+aws ecr describe-repositories --region us-east-1 --query 'repositories[?contains(repositoryName, `fish-game`)].repositoryName'
 
 # 預期輸出：
 # [
@@ -39,14 +39,14 @@ aws ecr describe-repositories --region ap-northeast-2 --query 'repositories[?con
 # ]
 
 # 檢查映像是否已推送
-aws ecr list-images --repository-name fish-game-client --region ap-northeast-2
+aws ecr list-images --repository-name fish-game-client --region us-east-1
 ```
 
 ### ✅ 第2章：EKS 集群設置
 
 ```bash
 # 檢查 EKS 集群
-aws eks describe-cluster --name fish-game-cluster --region ap-northeast-2 --query 'cluster.status'
+aws eks describe-cluster --name fish-game-cluster --region us-east-1 --query 'cluster.status'
 
 # 預期輸出：ACTIVE
 
@@ -81,13 +81,13 @@ echo "🏷️  驗證資源標籤..."
 
 # 第1章：ECR 倉庫標籤
 aws ecr list-tags-for-resource \
-  --resource-arn arn:aws:ecr:ap-northeast-2:$(aws sts get-caller-identity --query Account --output text):repository/fish-game-client \
+  --resource-arn arn:aws:ecr:us-east-1:$(aws sts get-caller-identity --query Account --output text):repository/fish-game-client \
   --query 'tags' --output table
 
 # 第2章：EKS 集群標籤
 aws eks describe-cluster \
   --name fish-game-cluster \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query 'cluster.tags'
 
 # 第3章：Kubernetes 資源標籤
@@ -95,7 +95,7 @@ kubectl get namespace fish-game-system -o jsonpath='{.metadata.labels}' | jq '.'
 
 # 第3章：負載均衡器標籤
 ALB_ARN=$(aws elbv2 describe-load-balancers \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" \
   --output text | head -1)
 
@@ -137,7 +137,7 @@ ManagedBy=<chapter-script-path>
 https://console.aws.amazon.com/devops-agent/
 
 # 注意：DevOps Agent 目前僅在 us-east-1 區域可用
-# 但可以監控其他區域的資源（如 ap-northeast-2）
+# 但可以監控其他區域的資源（如 us-east-1）
 ```
 
 #### 步驟 2：啟用 DevOps Agent
@@ -153,21 +153,21 @@ https://console.aws.amazon.com/devops-agent/
 1. **添加 EKS 集群**：
    - 導航到 "Capabilities" → "EKS Access"
    - 點擊 "Add EKS Cluster"
-   - 選擇區域：`ap-northeast-2`
+   - 選擇區域：`us-east-1`
    - 選擇集群：`fish-game-cluster`
    - 添加標籤過濾：`Project=fish-machine-workshop`
 
 2. **添加 CloudWatch 監控**：
    - 導航到 "Capabilities" → "Telemetry Sources"
    - 點擊 "Add CloudWatch"
-   - 選擇區域：`ap-northeast-2`
+   - 選擇區域：`us-east-1`
    - 日誌群組：`/aws/eks/fish-game-cluster/*`
    - 添加標籤過濾：`Project=fish-machine-workshop`
 
 3. **添加 ECR 監控**：
    - 導航到 "Capabilities" → "Container Registries"
    - 點擊 "Add ECR"
-   - 選擇區域：`ap-northeast-2`
+   - 選擇區域：`us-east-1`
    - 倉庫前綴：`fish-game-*`
    - 添加標籤過濾：`Project=fish-machine-workshop`
 
@@ -203,7 +203,7 @@ sudo ./aws/install --update
 ```bash
 # 設置區域和專案標籤
 export AWS_REGION=us-east-1  # DevOps Agent 服務區域
-export RESOURCE_REGION=ap-northeast-2  # 你的資源所在區域
+export RESOURCE_REGION=us-east-1  # 你的資源所在區域
 export PROJECT_TAG="fish-machine-workshop"
 export CLUSTER_NAME="fish-game-cluster"
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -274,7 +274,7 @@ echo "🤖 開始配置 AWS DevOps Agent..."
 
 # 環境變數
 export AWS_REGION=us-east-1
-export RESOURCE_REGION=ap-northeast-2
+export RESOURCE_REGION=us-east-1
 export PROJECT_TAG="fish-machine-workshop"
 export CLUSTER_NAME="fish-game-cluster"
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
@@ -424,7 +424,7 @@ aws cloudwatch put-metric-alarm \
   --threshold 80 \
   --comparison-operator GreaterThanThreshold \
   --evaluation-periods 1 \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --tags Key=Project,Value=fish-machine-workshop
 
 # 手動觸發告警（可選）
@@ -527,7 +527,7 @@ aws --version  # 確保版本 >= 2.x
 aws devops-agent configure-capability \
   --capability-type eks-access \
   --cluster-name fish-game-cluster \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --tags Project=fish-machine-workshop,Workshop=fish-machine-workshop
 ```
 
@@ -540,7 +540,7 @@ aws devops-agent configure-capability \
 aws devops-agent configure-capability \
   --capability-type telemetry-source \
   --source-type cloudwatch \
-  --region ap-northeast-2 \
+  --region us-east-1 \
   --log-groups "/aws/eks/fish-game-cluster/*" \
   --tags Project=fish-machine-workshop
 ```

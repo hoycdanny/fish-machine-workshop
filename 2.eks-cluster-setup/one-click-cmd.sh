@@ -4,7 +4,7 @@ set -e
 echo "🚀 開始 EKS 集群部署..."
 
 # 檢查並設定區域和集群名稱
-export AWS_REGION=${AWS_REGION:-ap-northeast-2}
+export AWS_REGION=${AWS_REGION:-us-east-1}
 export CLUSTER_NAME=${CLUSTER_NAME:-"fish-game-cluster"}
 export PROJECT_TAG="fish-machine-workshop"
 export MANAGED_BY_TAG="2.eks-cluster-setup/one-click-cmd.sh"

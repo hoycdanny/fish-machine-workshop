@@ -304,7 +304,7 @@ setup_bash_environment() {
     # 為工作用戶設定 bash 環境
     sudo -u $WORKSHOP_USER bash << EOF
 # 設定 AWS 預設區域
-aws configure set region ap-northeast-2
+aws configure set region us-east-1
 
 # 設定 bash 自動完成和別名
 cat >> ~/.bashrc << 'BASHRC'
@@ -312,7 +312,7 @@ cat >> ~/.bashrc << 'BASHRC'
 # Workshop 環境變數
 export WORKSHOP_DIR="$WORKSHOP_DIR"
 export PROJECT_DIR="$WORKSHOP_DIR/$PROJECT_NAME"
-export AWS_DEFAULT_REGION=ap-northeast-2
+export AWS_DEFAULT_REGION=us-east-1
 
 # Kubernetes 自動完成
 if command -v kubectl &> /dev/null; then

@@ -85,7 +85,7 @@ check_requirements() {
 setup_variables() {
     log_info "設定環境變數..."
     
-    export AWS_REGION=${AWS_REGION:-ap-northeast-2}
+    export AWS_REGION=${AWS_REGION:-us-east-1}
     export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
     export ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
     export IMAGE_TAG=${1:-latest}
@@ -281,7 +281,7 @@ usage() {
     echo "  $0 dev                # 使用 dev 標籤（開發環境）"
     echo ""
     echo -e "${GREEN}環境變數:${NC}"
-    echo "  AWS_REGION   AWS 區域 (預設: ap-northeast-2)"
+    echo "  AWS_REGION   AWS 區域 (預設: us-east-1)"
     echo ""
     echo -e "${YELLOW}💡 AWS DevOps Agent 整合:${NC}"
     echo "  - AWS DevOps Agent 會自動發現標記的 ECR 倉庫"

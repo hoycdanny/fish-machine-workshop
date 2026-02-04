@@ -235,11 +235,11 @@ chmod +x build-and-push.sh
 
 ### 推送完成後
 映像將可用於 EKS 部署（支援多標籤）：
-- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest`
-- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:v1.0.0`
-- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:staging`
-- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session:latest`
-- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server:latest`
+- `{account-id}.dkr.ecr.us-east-1.amazonaws.com/fish-game-client:latest`
+- `{account-id}.dkr.ecr.us-east-1.amazonaws.com/fish-game-client:v1.0.0`
+- `{account-id}.dkr.ecr.us-east-1.amazonaws.com/fish-game-client:staging`
+- `{account-id}.dkr.ecr.us-east-1.amazonaws.com/fish-game-session:latest`
+- `{account-id}.dkr.ecr.us-east-1.amazonaws.com/fish-game-server:latest`
 
 **ECR 倉庫管理介面**
 ![ECR 倉庫](image/1.ecr-repo.PNG)

@@ -70,7 +70,7 @@ update_image_addresses() {
         
         # 獲取 AWS Account ID 和 Region
         AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text 2>/dev/null)
-        AWS_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}
+        AWS_REGION=${AWS_DEFAULT_REGION:-us-east-1}
         
         if [ -z "$AWS_ACCOUNT_ID" ]; then
             log_error "無法獲取 AWS Account ID，請檢查 AWS 配置"
@@ -87,10 +87,10 @@ update_image_addresses() {
         sed -i "s|<AWS_ACCOUNT_ID>|${AWS_ACCOUNT_ID}|g" k8s-manifests/6.server-deployment.yaml
         
         # 更新區域（如果需要）
-        if [ "$AWS_REGION" != "ap-northeast-2" ]; then
-            sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/4.client-deployment.yaml
-            sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/5.session-deployment.yaml
-            sed -i "s|ap-northeast-2|${AWS_REGION}|g" k8s-manifests/6.server-deployment.yaml
+        if [ "$AWS_REGION" != "us-east-1" ]; then
+            sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/4.client-deployment.yaml
+            sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/5.session-deployment.yaml
+            sed -i "s|us-east-1|${AWS_REGION}|g" k8s-manifests/6.server-deployment.yaml
         fi
         
         log_success "鏡像地址更新完成"
@@ -176,15 +176,15 @@ wait_for_load_balancers() {
         
         # 如果 K8s 狀態未更新，嘗試從 AWS API 獲取
         if [ -z "$CLIENT_ALB" ]; then
-            CLIENT_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+            CLIENT_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
         fi
         
         if [ -z "$API_ALB" ]; then
-            API_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+            API_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
         fi
         
         if [ -z "$NLB_ADDRESS" ]; then
-            NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+            NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
         fi
         
         # 檢查是否都已獲取到地址
@@ -235,15 +235,15 @@ update_configmap() {
     
     # 如果 K8s 狀態未更新，從 AWS API 獲取
     if [ -z "$CLIENT_ALB" ]; then
-        CLIENT_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        CLIENT_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     if [ -z "$API_ALB" ]; then
-        API_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        API_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     if [ -z "$NLB_ADDRESS" ]; then
-        NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     log_info "獲取到的負載均衡器地址："
@@ -282,15 +282,15 @@ verify_deployment() {
     
     # 如果 K8s 狀態未更新，從 AWS API 獲取
     if [ -z "$CLIENT_ALB" ]; then
-        CLIENT_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        CLIENT_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgamestatic') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     if [ -z "$API_ALB" ]; then
-        API_ALB=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        API_ALB=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgameapi') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     if [ -z "$NLB_ADDRESS" ]; then
-        NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
+        NLB_ADDRESS=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fishgame-gameserv') && State.Code=='active'].DNSName" --output text 2>/dev/null)
     fi
     
     # 檢查 Pod 狀態

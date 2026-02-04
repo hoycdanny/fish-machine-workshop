@@ -30,7 +30,7 @@ log_section() {
 }
 
 # 環境變數
-export RESOURCE_REGION=ap-northeast-2
+export RESOURCE_REGION=us-east-1
 export PROJECT_TAG="fish-machine-workshop"
 export CLUSTER_NAME="fish-game-cluster"
 

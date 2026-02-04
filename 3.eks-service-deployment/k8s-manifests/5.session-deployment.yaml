@@ -21,7 +21,7 @@ spec:
       containers:
       - name: game-session-service
         # 注意：需要替換為你的 ECR 映像 URI
-        image: <AWS_ACCOUNT_ID>.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session
+        image: <AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/fish-game-session
         ports:
         - containerPort: 8082
         envFrom:

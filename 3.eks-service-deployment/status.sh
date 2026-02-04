@@ -201,7 +201,7 @@ verify_tags() {
     echo "🏷️  AWS 負載均衡器標籤："
     
     # 檢查 ALB 標籤
-    local alb_arns=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" --output text 2>/dev/null)
+    local alb_arns=$(aws elbv2 describe-load-balancers --region us-east-1 --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" --output text 2>/dev/null)
     
     if [ -n "$alb_arns" ]; then
         for arn in $alb_arns; do
