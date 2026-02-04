@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e  # 遇到錯誤立即退出
 
 # 顏色定義
@@ -39,19 +40,19 @@ confirm_cleanup() {
     echo ""
     echo "此操作將刪除以下所有資源："
     echo ""
-    echo "📦 應用層 (fish-game-system 命名空間)："
+    echo " 第 3 章：應用層 (fish-game-system 命名空間)："
     echo "  - 所有 Pod 和 Deployment"
     echo "  - 所有 Service 和 Ingress"
     echo "  - ALB 和 NLB 負載均衡器"
     echo "  - ConfigMap 和其他配置"
     echo ""
-    echo "☸️  EKS 集群："
+    echo "☸️  第 2 章：EKS 集群："
     echo "  - EKS Cluster: ${CLUSTER_NAME}"
-    echo "  - Node Group 和所有 EC2 節點"
+    echo "  - Node Group 和所有 EC2 節點 (3台 t3.medium)"
     echo "  - VPC、子網路、安全組"
     echo "  - IAM Roles 和政策"
     echo ""
-    echo "🐳 ECR 映像倉庫："
+    echo "🐳 第 1 章：ECR 映像倉庫："
     echo "  - fish-game-client"
     echo "  - fish-game-session"
     echo "  - fish-game-server"
@@ -61,7 +62,11 @@ confirm_cleanup() {
     echo "  - 所有 Container Insights 日誌群組"
     echo "  - 歷史日誌數據"
     echo ""
-    echo "💰 這將停止所有相關的 AWS 費用"
+    echo "✅ 保留資源："
+    echo "  - 第 0 章：Code Server EC2 實例（開發環境）"
+    echo "  - IAM Role: FishGameWorkshopRole"
+    echo ""
+    echo "💰 這將停止大部分 AWS 費用（保留 Code Server EC2）"
     echo ""
     
     read -p "❗ 確定要刪除所有資源嗎？此操作無法復原！(yes/NO): " -r
@@ -147,7 +152,7 @@ show_current_resources() {
     echo "🐳 ECR Repositories:"
     for repo in "${ECR_REPOS[@]}"; do
         if aws ecr describe-repositories --repository-names ${repo} --region ${REGION} &> /dev/null; then
-            IMAGE_COUNT=$(aws ecr list-images --repository-name ${repo} --region ${REGION} --query 'imageIds' --output json | jq '. | length')
+            IMAGE_COUNT=$(aws ecr list-images --repository-name ${repo} --region ${REGION} --query 'imageIds' --output json 2>/dev/null | jq '. | length' 2>/dev/null || echo "0")
             echo "  ✓ ${repo} (${IMAGE_COUNT} 個映像)"
         else
             echo "  ✗ ${repo} (不存在)"
@@ -170,7 +175,6 @@ delete_ingress() {
     
     log_step "刪除 Ingress 和 ALB"
     
-    # 檢查是否真的有 Ingress 資源
     local ingress_count=$(kubectl get ingress -n fish-game-system --no-headers 2>/dev/null | wc -l)
     
     if [ "$ingress_count" -gt 0 ]; then
@@ -366,7 +370,6 @@ delete_ecr_repositories() {
 delete_cloudwatch_logs() {
     log_step "刪除 CloudWatch 日誌群組"
     
-    # 獲取所有相關的日誌群組
     log_info "查找 CloudWatch 日誌群組..."
     LOG_GROUPS=$(aws logs describe-log-groups \
         --log-group-name-prefix /aws/containerinsights/${CLUSTER_NAME} \
@@ -405,7 +408,7 @@ cleanup_iam_policies() {
         log_info "找到政策: ${POLICY_ARN}"
         
         # 檢查是否有附加到任何角色
-        ATTACHED_COUNT=$(aws iam list-entities-for-policy --policy-arn ${POLICY_ARN} --query 'PolicyRoles' --output json | jq '. | length')
+        ATTACHED_COUNT=$(aws iam list-entities-for-policy --policy-arn ${POLICY_ARN} --query 'PolicyRoles' --output json 2>/dev/null | jq '. | length' 2>/dev/null || echo "0")
         
         if [ "$ATTACHED_COUNT" -eq 0 ]; then
             log_info "政策未附加到任何角色，可以安全刪除"
@@ -501,7 +504,11 @@ show_cleanup_summary() {
     echo "  ✅ ECR 映像倉庫和所有映像"
     echo "  ✅ CloudWatch 日誌群組和歷史數據"
     echo ""
-    echo "💰 所有相關的 AWS 費用已停止"
+    echo "保留的資源："
+    echo "  ✅ Code Server EC2 實例（開發環境）"
+    echo "  ✅ IAM Role: FishGameWorkshopRole"
+    echo ""
+    echo "💰 大部分 AWS 費用已停止（保留 Code Server EC2）"
     echo ""
     log_info "如需重新部署："
     echo "  1. 執行: cd ../2.eks-cluster-setup && ./one-click-cmd.sh"
