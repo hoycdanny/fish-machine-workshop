@@ -33,8 +33,8 @@ ManagedBy=3.eks-service-deployment/deploy.sh
    - Ingress: `client-ingress`, `api-ingress`
 
 2. **AWS 資源**（自動創建）：
-   - ALB (Application Load Balancer) x 2
-   - NLB (Network Load Balancer) x 1
+   - ALB (Application Load Balancer) x 2 - **Internal（內部）**
+   - NLB (Network Load Balancer) x 1 - **Internal（內部）**
    - Target Groups
    - Security Groups
 
@@ -98,6 +98,77 @@ echo "✅ IAM 權限設定完成！"
 **驗證結果：**
 `AmazonEKSLoadBalancerControllerRole` 應該有以下兩個政策：
 - ✅ `AWSLoadBalancerControllerIAMPolicy` (客戶受管)
+
+## 🔒 Internal 負載均衡器配置
+
+**重要安全設定：本專案使用 Internal（內部）負載均衡器**
+
+### 為什麼使用 Internal 負載均衡器？
+
+1. **安全性**：負載均衡器只能在 VPC 內部訪問，不暴露到公網
+2. **成本優化**：避免不必要的公網流量費用
+3. **訪問控制**：只有 VPC 內的資源（如 Code Server EC2）可以訪問
+4. **符合最佳實踐**：Workshop 環境不需要公網訪問
+
+### 配置詳情
+
+**ALB (Application Load Balancer)：**
+```yaml
+annotations:
+  alb.ingress.kubernetes.io/scheme: internal  # 內部負載均衡器
+```
+
+**NLB (Network Load Balancer)：**
+```yaml
+annotations:
+  service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"  # 內部負載均衡器
+```
+
+### 如何訪問應用？
+
+由於負載均衡器是 internal，你需要從 VPC 內部訪問：
+
+**方法 1：從 Code Server EC2 訪問（推薦）**
+```bash
+# 在 Code Server EC2 上執行
+curl http://<ALB-INTERNAL-DNS>
+```
+
+**方法 2：使用 kubectl port-forward（開發測試）**
+```bash
+# 轉發到本地
+kubectl port-forward -n fish-game-system svc/client-service 8081:8081
+# 然後在瀏覽器訪問 http://localhost:8081
+```
+
+**方法 3：設置 SSH 隧道（從本地訪問）**
+```bash
+# 通過 Code Server EC2 建立隧道
+ssh -L 8081:<ALB-INTERNAL-DNS>:80 ec2-user@<CODE-SERVER-PUBLIC-IP>
+# 然後在瀏覽器訪問 http://localhost:8081
+```
+
+### 如果需要改成 Internet-facing
+
+如果你需要公網訪問（不推薦用於生產環境），可以修改：
+
+**修改 ALB：**
+```bash
+# 編輯 3.eks-service-deployment/k8s-manifests/9.ingress.yaml
+# 將 scheme: internal 改為 scheme: internet-facing
+```
+
+**修改 NLB：**
+```bash
+# 編輯 3.eks-service-deployment/k8s-manifests/8.nlb.yaml
+# 將 scheme: "internal" 改為 scheme: "internet-facing"
+```
+
+然後重新部署：
+```bash
+kubectl apply -f k8s-manifests/8.nlb.yaml
+kubectl apply -f k8s-manifests/9.ingress.yaml
+```
 - ✅ `ElasticLoadBalancingFullAccess` (AWS 受管)
 
 **⚠️ 重要：此步驟必須在部署前完成，否則 ALB/NLB 創建會失敗！**
