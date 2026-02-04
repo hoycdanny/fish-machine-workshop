@@ -9,6 +9,7 @@
 - [🎮 遊戲展示](#-遊戲展示)
 - [🎯 Workshop 學習目標](#-workshop-學習目標)
 - [🏗️ 系統架構概覽](#️-系統架構概覽)
+- [🏷️ 標籤策略](#️-標籤策略)
 - [🚀 快速開始](#-快速開始)
 - [📚 Workshop 章節](#-workshop-章節)
 - [🎮 遊戲功能特色](#-遊戲功能特色)
@@ -107,6 +108,37 @@ graph TB
 | **game-server-service** | 8083 | 2 | WebSocket+遊戲邏輯+Admin，處理遊戲核心功能 | CPU: 500m-1000m, Memory: 512Mi-1Gi |
 | **redis** | 6379 | 1 | 遊戲狀態+統計，數據緩存和會話存儲 | CPU: 250m-500m, Memory: 256Mi-512Mi |
 
+## 🏷️ 標籤策略
+
+本 Workshop 使用統一的標籤策略，方便資源管理、成本追蹤和自動化部署：
+
+### AWS 資源標籤
+
+所有 AWS 資源（EC2、ECR、EKS 等）都使用以下標籤：
+
+| 標籤鍵 | 標籤值 | 用途 |
+|--------|--------|------|
+| `Project` | `fish-machine-workshop` | 專案識別 |
+| `Workshop` | `fish-machine-workshop` | Workshop 識別 |
+| `ManagedBy` | `https://github.com/hoycdanny/fish-machine-workshop` | 專案來源 |
+
+### Docker 映像標籤
+
+用於版本管理和環境區分：
+
+| 標籤類型 | 範例 | 用途 | DevOps Agent |
+|---------|------|------|--------------|
+| **latest** | `latest` | 最新開發版本 | ✅ 可監控 |
+| **版本號** | `v1.0.0`, `v1.1.0` | 語義化版本 | ✅ 可監控 |
+| **環境** | `dev`, `staging`, `production` | 環境標識 | ✅ 可監控 |
+
+**DevOps Agent 監控方式：**
+- 🔍 **ECR API**：監控映像 digest 變化
+- ⚡ **EventBridge**：即時接收 ECR 推送事件（推薦）
+- 🔄 **輪詢檢查**：定期檢查映像標籤更新
+
+**📖 [查看完整標籤策略文檔 →](TAGS-STRATEGY.md)**
+
 ## 🚀 快速開始
 
 想要開始學習？請按順序完成各章節：
@@ -168,6 +200,19 @@ graph TB
 - 🛠️ 生產環境運維指南
 
 **📖 [查看第3章詳細指南 →](3.eks-service-deployment/README.md)**
+
+---
+
+### 🤖 [第4章：AWS DevOps Agent 整合](4.aws-devops-agent-integration/)
+**⏱️ 預估時間：60-90 分鐘**
+
+- 🏷️ **Docker 映像標籤策略** (latest, v1.0.0, dev, staging, production)
+- 🤖 **DevOps Agent 自動化部署**
+- 🔄 **多環境部署管理** (開發、測試、生產)
+- 📊 **部署監控和回滾策略**
+- 🚀 **CI/CD 流程整合**
+
+**📖 [查看第4章詳細指南 →](4.aws-devops-agent-integration/README.md)**
 
 ## 🎮 遊戲功能特色
 

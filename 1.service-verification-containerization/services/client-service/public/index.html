@@ -594,6 +594,75 @@
             padding: 40px;
             color: #7f8c8d;
         }
+
+        /* 記憶體面板樣式（inline 在 header 內） */
+        .memory-panel-inline {
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 12px;
+        }
+
+        .memory-panel-inline .mode-badge {
+            background: #4CAF50;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+
+        .memory-panel-inline.demo-mode .mode-badge {
+            background: #FF9800;
+            animation: pulse-badge 2s infinite;
+        }
+
+        @keyframes pulse-badge {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .memory-stats {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .memory-stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .memory-stat-item .label {
+            font-size: 14px;
+        }
+
+        .memory-stat-item .value {
+            font-weight: bold;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .memory-stat-item .value.warning {
+            color: #FF9800;
+        }
+
+        .memory-stat-item .value.critical {
+            color: #F44336;
+            animation: pulse-text 1s infinite;
+        }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
     </style>
 </head>
 
@@ -636,6 +705,24 @@
             <div>
                 <h1>🐟 多人捕魚機</h1>
                 <span class="room-info" id="roomInfo">未加入房間</span>
+            </div>
+            <!-- 記憶體面板（移到 header 內） -->
+            <div id="memoryPanel" class="memory-panel-inline" style="display: none;">
+                <div class="mode-badge">載入中...</div>
+                <div class="memory-stats">
+                    <span class="memory-stat-item">
+                        <span class="label">🐟</span>
+                        <span class="value" id="fishCount">0</span>
+                    </span>
+                    <span class="memory-stat-item">
+                        <span class="label">📊</span>
+                        <span class="value" id="memoryUsage">0%</span>
+                    </span>
+                    <span class="memory-stat-item">
+                        <span class="label">💾</span>
+                        <span class="value" id="memoryDetail">-</span>
+                    </span>
+                </div>
             </div>
             <div class="user-info">
                 <span>玩家: <span id="playerName">-</span></span>
@@ -1196,6 +1283,100 @@
                     removeBulletElement(data.bulletId);
                 }
             });
+
+            // 記憶體狀態更新
+            socket.on('memory-status', (data) => {
+                if (!data) return;
+                updateMemoryPanel(data);
+            });
+
+            // Demo 模式變更
+            socket.on('demo-mode-changed', (data) => {
+                console.log('Demo 模式變更:', data);
+                if (data && data.enabled !== undefined) {
+                    showStatus(`Demo 模式已${data.enabled ? '啟用' : '關閉'}`, 'info');
+                }
+            });
+
+            // Demo 模式配置變更
+            socket.on('demo-mode-config-changed', (data) => {
+                console.log('Demo 模式配置變更:', data);
+                if (data && data.maxFish) {
+                    showStatus(`Demo 配置已更新：最多 ${data.maxFish} 條魚`, 'info');
+                }
+            });
+
+            // 記憶體限制達到
+            socket.on('memory-limit-reached', (data) => {
+                console.log('記憶體限制達到:', data);
+                showStatus('⚠️ 記憶體已滿！請打掉更多魚', 'error');
+            });
+        }
+
+        // 更新記憶體面板
+        function updateMemoryPanel(data) {
+            const panel = document.getElementById('memoryPanel');
+            const modeBadge = panel.querySelector('.mode-badge');
+            const fishCount = document.getElementById('fishCount');
+            const memoryUsage = document.getElementById('memoryUsage');
+            const memoryDetail = document.getElementById('memoryDetail');
+
+            // Debug: 查看收到的數據
+            console.log('[Memory Panel] Received data:', data);
+
+            // 顯示面板
+            panel.style.display = 'flex';
+
+            // 更新模式標籤
+            if (data.mode === 'demo') {
+                panel.className = 'memory-panel-inline demo-mode';
+                modeBadge.textContent = '🎯 Demo';
+                
+                // 更新魚數量（顯示限制）
+                fishCount.textContent = `${data.fishCount}/${data.maxFish}`;
+                fishCount.className = data.fishCount >= data.maxFish ? 'value critical' : 'value';
+                
+                // 更新記憶體使用（限制顯示最多 100%，但標記超限）
+                const displayPercent = Math.min(data.memoryUsage, 100);
+                const isOverLimit = data.memoryUsage > 100;
+                memoryUsage.textContent = isOverLimit ? `100%+` : `${displayPercent}%`;
+                memoryUsage.className = isOverLimit ? 'value critical' : 
+                                       data.status === 'critical' ? 'value critical' : 
+                                       data.status === 'warning' ? 'value warning' : 'value';
+                
+                // 詳細資訊（顯示 MB / 總 MB）
+                console.log('[Memory Panel] Demo mode - rssMB:', data.rssMB, 'containerLimitMB:', data.containerLimitMB);
+                if (data.rssMB && data.containerLimitMB) {
+                    memoryDetail.textContent = `${data.rssMB}/${data.containerLimitMB}MB`;
+                    memoryDetail.className = data.rssMB > data.containerLimitMB ? 'value critical' : 'value';
+                } else if (data.rssMB) {
+                    memoryDetail.textContent = `${data.rssMB}MB`;
+                } else {
+                    memoryDetail.textContent = '-';
+                }
+            } else {
+                // 正常模式
+                panel.className = 'memory-panel-inline normal-mode';
+                modeBadge.textContent = '✅ 正常';
+                
+                // 更新魚數量（無限制）
+                fishCount.textContent = `${data.fishCount}`;
+                fishCount.className = 'value';
+                
+                // 更新記憶體使用（顯示百分比）
+                memoryUsage.textContent = `${data.memoryUsage}%`;
+                memoryUsage.className = 'value';
+                
+                // 詳細資訊（顯示 heap MB / 總 MB）
+                console.log('[Memory Panel] Normal mode - heapUsedMB:', data.heapUsedMB, 'heapTotalMB:', data.heapTotalMB);
+                if (data.heapUsedMB && data.heapTotalMB) {
+                    memoryDetail.textContent = `${data.heapUsedMB}/${data.heapTotalMB}MB`;
+                } else if (data.rssMB) {
+                    memoryDetail.textContent = `${data.rssMB}MB`;
+                } else {
+                    memoryDetail.textContent = '-';
+                }
+            }
         }
 
         // 尋找房間

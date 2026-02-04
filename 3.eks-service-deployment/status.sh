@@ -178,6 +178,42 @@ show_access_urls() {
     fi
 }
 
+# 驗證資源標籤
+verify_tags() {
+    log_section "資源標籤驗證"
+    
+    echo "🏷️  Kubernetes 資源標籤："
+    echo ""
+    
+    # 檢查 Namespace 標籤
+    echo "Namespace 標籤："
+    kubectl get namespace fish-game-system -o jsonpath='{.metadata.labels}' 2>/dev/null | jq '.' 2>/dev/null || echo "  未找到標籤"
+    
+    echo ""
+    echo "Deployment 標籤："
+    kubectl get deployments -n fish-game-system -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.metadata.labels}{"\n"}{end}' 2>/dev/null | head -5
+    
+    echo ""
+    echo "Service 標籤："
+    kubectl get services -n fish-game-system -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.metadata.labels}{"\n"}{end}' 2>/dev/null | head -5
+    
+    echo ""
+    echo "🏷️  AWS 負載均衡器標籤："
+    
+    # 檢查 ALB 標籤
+    local alb_arns=$(aws elbv2 describe-load-balancers --region ap-northeast-2 --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" --output text 2>/dev/null)
+    
+    if [ -n "$alb_arns" ]; then
+        for arn in $alb_arns; do
+            echo ""
+            echo "負載均衡器: $(aws elbv2 describe-load-balancers --load-balancer-arns $arn --query 'LoadBalancers[0].LoadBalancerName' --output text 2>/dev/null)"
+            aws elbv2 describe-tags --resource-arns $arn --query 'TagDescriptions[0].Tags[?Key==`Project` || Key==`Workshop` || Key==`ManagedBy`]' --output table 2>/dev/null || echo "  未找到標籤"
+        done
+    else
+        log_warning "未找到相關的負載均衡器"
+    fi
+}
+
 # 顯示最近事件
 show_recent_events() {
     log_section "最近事件"
@@ -209,6 +245,7 @@ main() {
     check_configmap
     test_health_checks
     show_access_urls
+    verify_tags
     show_recent_events
     
     echo ""

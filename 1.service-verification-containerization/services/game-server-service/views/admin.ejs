@@ -125,6 +125,52 @@
             text-align: right;
             margin-top: 10px;
         }
+        
+        /* Toggle Switch 樣式 */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #FF9800;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
     </style>
 </head>
 <body>
@@ -222,6 +268,57 @@
             
             <!-- 配置狀態提示 -->
             <div id="configStatus" class="status-message"></div>
+        </div>
+        
+        <div class="section">
+            <h3>🎯 DevOps Agent Demo 模式</h3>
+            <p style="color: #666; margin-bottom: 15px;">
+                啟用後，魚群會模擬消耗記憶體，用於展示 DevOps Agent 的問題分析能力。正常遊戲時請保持關閉。
+            </p>
+            
+            <div class="config-item">
+                <label for="demoModeToggle">Demo 模式:</label>
+                <label class="switch">
+                    <input type="checkbox" id="demoModeToggle">
+                    <span class="slider"></span>
+                </label>
+                <span class="config-value" id="demoModeStatus">關閉</span>
+            </div>
+            
+            <div id="demoModeConfig" style="display: none; margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 4px;">
+                <h4 style="margin-top: 0; color: #856404;">Demo 參數設定</h4>
+                
+                <div class="config-item">
+                    <label for="maxFishCount">最大魚數量:</label>
+                    <input type="range" id="maxFishCount" min="5" max="30" step="1" value="15">
+                    <span class="config-value" id="maxFishCountValue">15 條</span>
+                </div>
+                
+                <div class="config-item">
+                    <label for="memoryPerFish">每條魚記憶體消耗:</label>
+                    <input type="range" id="memoryPerFish" min="1" max="10" step="1" value="4">
+                    <span class="config-value" id="memoryPerFishValue">4%</span>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button onclick="updateDemoConfig()" style="padding: 10px 30px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                        💾 更新配置
+                    </button>
+                </div>
+                
+                <div style="margin-top: 10px; padding: 10px; background: white; border-radius: 4px;">
+                    <strong>計算說明：</strong>
+                    <ul style="margin: 5px 0; padding-left: 20px; font-size: 14px;">
+                        <li>容器記憶體限制：768MB</li>
+                        <li>每條魚消耗：<span id="memoryPerFishMB">30.72</span>MB（4% × 768MB）</li>
+                        <li>最大魚數量：<span id="maxFishDisplay">15</span> 條</li>
+                        <li>預計記憶體消耗：<span id="estimatedMemory">307</span>MB（<span id="estimatedPercent">60</span>%）</li>
+                        <li>所有事件會記錄到 CloudWatch</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div id="demoModeStatus" class="status-message"></div>
         </div>
         
         <div class="section">
@@ -406,9 +503,157 @@
             }
         }
         
+        // Demo 模式初始化
+        async function initDemoMode() {
+            try {
+                // 獲取當前 Demo 模式狀態
+                const response = await fetch('/admin/api/demo-mode');
+                const result = await response.json();
+                
+                if (result.success) {
+                    const demoMode = result.data;
+                    const toggle = document.getElementById('demoModeToggle');
+                    const statusText = document.getElementById('demoModeStatus');
+                    const configDiv = document.getElementById('demoModeConfig');
+                    
+                    // 設置開關狀態
+                    toggle.checked = demoMode.enabled;
+                    statusText.textContent = demoMode.enabled ? '啟用' : '關閉';
+                    statusText.style.color = demoMode.enabled ? '#FF9800' : '#666';
+                    
+                    // 顯示/隱藏配置
+                    configDiv.style.display = demoMode.enabled ? 'block' : 'none';
+                    
+                    // 設置配置值
+                    const maxFish = Math.floor((demoMode.maxMemory - demoMode.baseMemory) / demoMode.memoryPerFish);
+                    document.getElementById('maxFishCount').value = maxFish;
+                    document.getElementById('maxFishCountValue').textContent = maxFish + ' 條';
+                    document.getElementById('memoryPerFish').value = demoMode.memoryPerFish;
+                    document.getElementById('memoryPerFishValue').textContent = demoMode.memoryPerFish + '%';
+                    
+                    // 更新計算說明
+                    updateMemoryCalculation();
+                }
+            } catch (error) {
+                console.error('Error initializing demo mode:', error);
+            }
+            
+            // 綁定開關事件
+            const toggle = document.getElementById('demoModeToggle');
+            toggle.addEventListener('change', toggleDemoMode);
+            
+            // 綁定滑桿事件
+            document.getElementById('maxFishCount').addEventListener('input', (e) => {
+                document.getElementById('maxFishCountValue').textContent = e.target.value + ' 條';
+                updateMemoryCalculation();
+            });
+            document.getElementById('memoryPerFish').addEventListener('input', (e) => {
+                document.getElementById('memoryPerFishValue').textContent = e.target.value + '%';
+                updateMemoryCalculation();
+            });
+        }
+        
+        // 更新記憶體計算說明
+        function updateMemoryCalculation() {
+            const containerMemoryMB = 768; // 更新為 768MB
+            const maxFishCount = parseInt(document.getElementById('maxFishCount').value);
+            const memoryPerFish = parseInt(document.getElementById('memoryPerFish').value);
+            
+            // 計算每條魚的 MB
+            const memoryPerFishMB = (containerMemoryMB * memoryPerFish / 100).toFixed(2);
+            
+            // 計算總記憶體消耗
+            const estimatedMemoryMB = Math.round(maxFishCount * memoryPerFishMB);
+            const estimatedPercent = Math.round((estimatedMemoryMB / containerMemoryMB) * 100);
+            
+            // 更新顯示
+            document.getElementById('memoryPerFishMB').textContent = memoryPerFishMB;
+            document.getElementById('maxFishDisplay').textContent = maxFishCount;
+            document.getElementById('estimatedMemory').textContent = estimatedMemoryMB;
+            document.getElementById('estimatedPercent').textContent = estimatedPercent;
+        }
+        
+        // 切換 Demo 模式
+        async function toggleDemoMode() {
+            const toggle = document.getElementById('demoModeToggle');
+            const enabled = toggle.checked;
+            const statusText = document.getElementById('demoModeStatus');
+            const configDiv = document.getElementById('demoModeConfig');
+            
+            try {
+                const response = await fetch('/admin/api/demo-mode/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    statusText.textContent = enabled ? '啟用' : '關閉';
+                    statusText.style.color = enabled ? '#FF9800' : '#666';
+                    configDiv.style.display = enabled ? 'block' : 'none';
+                    
+                    showDemoModeStatus(`Demo 模式已${enabled ? '啟用' : '關閉'}`, 'success');
+                } else {
+                    toggle.checked = !enabled;
+                    showDemoModeStatus('Demo 模式切換失敗: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error toggling demo mode:', error);
+                toggle.checked = !enabled;
+                showDemoModeStatus('Demo 模式切換失敗: 網路錯誤', 'error');
+            }
+        }
+        
+        // 更新 Demo 模式配置
+        async function updateDemoConfig() {
+            const maxFishCount = parseInt(document.getElementById('maxFishCount').value);
+            const memoryPerFish = parseInt(document.getElementById('memoryPerFish').value);
+            
+            console.log('[Admin] 更新 Demo 配置:', { maxFishCount, memoryPerFish });
+            
+            try {
+                const response = await fetch('/admin/api/demo-mode/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        maxFishCount: maxFishCount,
+                        memoryPerFish: memoryPerFish
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('[Admin] 配置更新結果:', result);
+                
+                if (result.success) {
+                    showDemoModeStatus('Demo 模式配置已更新', 'success');
+                    updateMemoryCalculation();
+                } else {
+                    showDemoModeStatus('配置更新失敗: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('[Admin] 配置更新錯誤:', error);
+                showDemoModeStatus('配置更新失敗: 網路錯誤', 'error');
+            }
+        }
+        
+        // 顯示 Demo 模式狀態訊息
+        function showDemoModeStatus(message, type) {
+            const statusDiv = document.getElementById('demoModeStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = 'status-message ' + type;
+            statusDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }
+        
         // 頁面載入完成後初始化
         document.addEventListener('DOMContentLoaded', () => {
             AdminDashboard.init();
+            initDemoMode();
         });
     </script>
 </body>

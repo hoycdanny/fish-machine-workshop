@@ -436,6 +436,7 @@ verify_installation() {
 # 顯示完成資訊
 show_completion_info() {
     local public_ip=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/public-ipv4 2>/dev/null || echo "YOUR_EC2_IP")
+    local instance_id=$(curl -s --connect-timeout 5 http://169.254.169.254/latest/meta-data/instance-id 2>/dev/null || echo "INSTANCE_ID")
     
     log_info "=========================================="
     log_info "魚機遊戲 EKS Workshop 環境設定完成！"
@@ -453,6 +454,21 @@ show_completion_info() {
     log_info "  - eksctl"
     log_info "  - Helm"
     log_info "  - VS Code Server"
+    log_info ""
+    log_info "資源標籤資訊:"
+    log_info "  Project: fish-machine-workshop"
+    log_info "  Workshop: fish-machine-workshop"
+    log_info "  ManagedBy: 0.dev-environment-setup/ec2-userdata.sh"
+    log_info "  Instance ID: $instance_id"
+    log_info ""
+    log_info "⚠️  重要：請在 EC2 控制台為此實例添加標籤"
+    log_info "  1. 進入 EC2 控制台"
+    log_info "  2. 選擇實例 ID: $instance_id"
+    log_info "  3. 點擊 'Tags' 標籤頁"
+    log_info "  4. 添加以下標籤："
+    log_info "     - Key: Project, Value: fish-machine-workshop"
+    log_info "     - Key: Workshop, Value: fish-machine-workshop"
+    log_info "     - Key: ManagedBy, Value: 0.dev-environment-setup/ec2-userdata.sh"
     log_info ""
     log_info "故障排除:"
     log_info "  - 設定日誌: /var/log/workshop-setup.log"

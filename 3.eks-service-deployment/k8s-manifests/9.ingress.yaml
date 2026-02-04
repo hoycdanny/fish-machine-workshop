@@ -4,11 +4,16 @@ kind: Ingress
 metadata:
   name: client-ingress
   namespace: fish-game-system
+  labels:
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/group.name: fish-game-static
+    alb.ingress.kubernetes.io/tags: "Project=fish-machine-workshop,Workshop=fish-machine-workshop,ManagedBy=3.eks-service-deployment-deploy.sh"
 spec:
   ingressClassName: alb
   rules:
@@ -37,11 +42,16 @@ kind: Ingress
 metadata:
   name: api-ingress
   namespace: fish-game-system
+  labels:
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/group.name: fish-game-api
+    alb.ingress.kubernetes.io/tags: "Project=fish-machine-workshop,Workshop=fish-machine-workshop,ManagedBy=3.eks-service-deployment-deploy.sh"
 spec:
   ingressClassName: alb
   rules:

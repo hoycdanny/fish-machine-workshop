@@ -4,13 +4,46 @@
 
 ## 🎯 本章學習目標
 
-通過本章學習，你將掌握：
+通過本章學習,你將掌握：
 
 - 📦 **Kubernetes 資源管理**：理解 Namespace, ConfigMap, Deployment, Service
 - 🔗 **服務發現機制**：學習 Kubernetes 內部服務如何互相通信
 - 🌐 **負載均衡配置**：掌握 ALB 和 NLB 的使用場景和配置方法
 - 🔧 **故障排除技能**：學會使用 kubectl 命令診斷和解決問題
 - 🎮 **端到端部署**：完成從容器到可訪問應用的完整流程
+- 🏷️ **資源標籤管理**：統一標記所有資源，便於 DevOps Agent 監控
+
+## 🏷️ 資源標籤策略
+
+本章創建的所有資源都會自動添加以下標籤：
+
+```bash
+Project=fish-machine-workshop
+Workshop=fish-machine-workshop
+ManagedBy=3.eks-service-deployment/deploy.sh
+```
+
+### 標記的資源
+
+1. **Kubernetes 資源**：
+   - Namespace: `fish-game-system`
+   - ConfigMap: `fish-game-config`
+   - Deployments: `redis`, `client-service`, `game-session-service`, `game-server-service`
+   - Services: 所有 ClusterIP 服務和 NLB
+   - Ingress: `client-ingress`, `api-ingress`
+
+2. **AWS 資源**（自動創建）：
+   - ALB (Application Load Balancer) x 2
+   - NLB (Network Load Balancer) x 1
+   - Target Groups
+   - Security Groups
+
+### 標籤用途
+
+- **資源追蹤**：快速識別屬於本專案的所有資源
+- **成本管理**：按專案追蹤 AWS 成本
+- **DevOps Agent 監控**：AWS DevOps Agent 自動發現並監控標記的資源
+- **除錯追蹤**：`ManagedBy` 標籤指向創建資源的腳本路徑，方便除錯
 
 ## 📋 前置條件檢查
 
@@ -842,6 +875,98 @@ aws elbv2 describe-load-balancers --region ap-northeast-2
 # 強制刪除命名空間（如果卡住）
 kubectl delete namespace fish-game-system --force --grace-period=0
 ```
+
+## 🏷️ 資源標籤驗證
+
+部署完成後，驗證所有資源都已正確標記：
+
+### 驗證 Kubernetes 資源標籤
+
+```bash
+echo "🏷️  檢查 Kubernetes 資源標籤..."
+
+# 檢查 Namespace 標籤
+kubectl get namespace fish-game-system -o jsonpath='{.metadata.labels}' | jq '.'
+
+# 預期輸出：
+# {
+#   "name": "fish-game-system",
+#   "project": "fish-machine-workshop",
+#   "workshop": "fish-machine-workshop",
+#   "managed-by": "3.eks-service-deployment/deploy.sh"
+# }
+
+# 檢查 Deployment 標籤
+kubectl get deployments -n fish-game-system -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.metadata.labels}{"\n"}{end}'
+
+# 檢查 Service 標籤
+kubectl get services -n fish-game-system -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.metadata.labels}{"\n"}{end}'
+
+# 檢查 Ingress 標籤
+kubectl get ingress -n fish-game-system -o jsonpath='{range .items[*]}{.metadata.name}{": "}{.metadata.labels}{"\n"}{end}'
+```
+
+### 驗證 AWS 負載均衡器標籤
+
+```bash
+echo "🏷️  檢查 AWS 負載均衡器標籤..."
+
+# 列出所有相關的負載均衡器
+aws elbv2 describe-load-balancers \
+  --region ap-northeast-2 \
+  --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].[LoadBalancerName,LoadBalancerArn]" \
+  --output table
+
+# 檢查特定負載均衡器的標籤
+ALB_ARN=$(aws elbv2 describe-load-balancers \
+  --region ap-northeast-2 \
+  --query "LoadBalancers[?contains(LoadBalancerName, 'fish-game')].LoadBalancerArn" \
+  --output text | head -1)
+
+if [ -n "$ALB_ARN" ]; then
+  echo "檢查負載均衡器標籤："
+  aws elbv2 describe-tags \
+    --resource-arns $ALB_ARN \
+    --query 'TagDescriptions[0].Tags[?Key==`Project` || Key==`Workshop` || Key==`ManagedBy`]' \
+    --output table
+fi
+
+# 預期輸出：
+# |  Key       |  Value                                |
+# |------------|---------------------------------------|
+# |  Project   |  fish-machine-workshop                |
+# |  Workshop  |  fish-machine-workshop                |
+# |  ManagedBy |  3.eks-service-deployment/deploy.sh   |
+```
+
+### 使用 Resource Groups Tagging API 查詢
+
+```bash
+# 查詢所有標記為本章創建的資源
+aws resourcegroupstaggingapi get-resources \
+  --tag-filters Key=Project,Values=fish-machine-workshop Key=ManagedBy,Values=3.eks-service-deployment/deploy.sh \
+  --region ap-northeast-2 \
+  --query 'ResourceTagMappingList[].[ResourceARN]' \
+  --output table
+
+# 這將列出所有由本章腳本創建的 AWS 資源
+```
+
+### 使用 status.sh 自動驗證
+
+```bash
+# status.sh 腳本已包含標籤驗證功能
+./status.sh
+
+# 查看標籤驗證部分
+./status.sh | grep -A 20 "資源標籤驗證"
+```
+
+**💡 標籤驗證的重要性**：
+- ✅ 確保所有資源都可以被 AWS DevOps Agent 發現
+- ✅ 方便成本追蹤和資源管理
+- ✅ 便於除錯時追蹤資源來源
+- ✅ 支援自動化運維和監控
 
 ---
 

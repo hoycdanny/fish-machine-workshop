@@ -5,6 +5,9 @@ metadata:
   namespace: fish-game-system
   labels:
     app: game-session-service
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh
 spec:
   replicas: 1
   selector:

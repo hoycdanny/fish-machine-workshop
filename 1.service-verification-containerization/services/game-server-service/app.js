@@ -24,6 +24,7 @@ const cors = require('cors');
 const path = require('path');
 const axios = require('axios');
 const redis = require('redis');
+const logger = require('./logger');
 
 const app = express();
 const server = http.createServer(app);
@@ -69,6 +70,16 @@ app.set('views', path.join(__dirname, 'views'));
 let gameState = {
   rooms: {},
   connections: 0
+};
+
+// Demo 模式配置
+let DEMO_MODE = {
+  enabled: false,
+  memoryPerFish: 4,  // 每條魚消耗 4% 記憶體
+  maxMemory: 80,     // 最大 80% 記憶體
+  baseMemory: 20,    // 基礎記憶體 20%
+  containerMemoryMB: 768, // 容器記憶體限制（MB）- 增加到 768MB 避免 OOM
+  memoryBalloons: {} // 儲存記憶體氣球（真實消耗記憶體）
 };
 
 // 遊戲統計收集器
@@ -287,9 +298,144 @@ function initializeRoom(roomId) {
       gameAreaWidth: 1400,  // 固定遊戲區域寬度
       gameAreaHeight: 700   // 固定遊戲區域高度
     };
-    console.log(`[${new Date().toISOString()}] Room ${roomId} initialized with fixed game area: 1400x700`);
+    logger.info({
+      event: 'room_initialized',
+      roomId: roomId,
+      gameArea: '1400x700'
+    });
   }
   return gameState.rooms[roomId];
+}
+
+// 獲取記憶體狀態
+function getMemoryStatus(roomId) {
+  const room = gameState.rooms[roomId];
+  if (!room) return null;
+  
+  const fishCount = Object.keys(room.fishes || {}).length;
+  
+  // 獲取真實記憶體使用情況
+  const memUsage = process.memoryUsage();
+  
+  if (DEMO_MODE.enabled) {
+    // Demo 模式：使用 RSS 計算百分比（Buffer 記憶體在 RSS 中）
+    const rssMB = Math.round(memUsage.rss / 1024 / 1024);
+    const memoryPercent = Math.round((rssMB / DEMO_MODE.containerMemoryMB) * 100);
+    const maxFish = Math.floor((DEMO_MODE.maxMemory - DEMO_MODE.baseMemory) / DEMO_MODE.memoryPerFish);
+    
+    return {
+      mode: 'demo',
+      fishCount: fishCount,
+      maxFish: maxFish,
+      memoryUsage: memoryPercent,
+      maxMemory: DEMO_MODE.maxMemory,
+      heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+      heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+      rssMB: rssMB,
+      containerLimitMB: DEMO_MODE.containerMemoryMB,
+      status: memoryPercent >= DEMO_MODE.maxMemory ? 'critical' : 
+              memoryPercent >= 70 ? 'warning' : 'normal'
+    };
+  } else {
+    // 正常模式：使用 heap 百分比
+    const memoryPercent = Math.round((memUsage.heapUsed / memUsage.heapTotal) * 100);
+    
+    return {
+      mode: 'normal',
+      fishCount: fishCount,
+      maxFish: null,
+      memoryUsage: memoryPercent,
+      maxMemory: 100,
+      heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+      heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+      rssMB: Math.round(memUsage.rss / 1024 / 1024),
+      status: memoryPercent >= 80 ? 'high' : 'normal'
+    };
+  }
+}
+
+// 分配記憶體（Demo 模式真實消耗記憶體）
+function allocateMemoryForFish(fishId) {
+  if (!DEMO_MODE.enabled) return;
+  
+  // 根據容器記憶體限制動態計算每條魚的記憶體大小
+  // 4% of 512MB = 20.48MB
+  const memorySize = Math.floor((DEMO_MODE.containerMemoryMB * DEMO_MODE.memoryPerFish / 100) * 1024 * 1024);
+  
+  // 創建一個大型 Buffer 來真實消耗記憶體
+  const buffer = Buffer.alloc(memorySize);
+  
+  // 填充一些數據，確保記憶體真的被使用
+  for (let i = 0; i < buffer.length; i += 1024) {
+    buffer[i] = Math.floor(Math.random() * 256);
+  }
+  
+  // 儲存 buffer 引用，防止被 GC 回收
+  DEMO_MODE.memoryBalloons[fishId] = buffer;
+  
+  logger.info('memory_allocated', {
+    eventType: 'memory_event',
+    event: 'memory_allocated',
+    fishId: fishId,
+    allocatedMB: Math.round(memorySize / 1024 / 1024),
+    allocatedPercent: DEMO_MODE.memoryPerFish,
+    containerLimitMB: DEMO_MODE.containerMemoryMB,
+    totalBalloons: Object.keys(DEMO_MODE.memoryBalloons).length,
+    demoMode: true
+  });
+}
+
+// 釋放記憶體（Demo 模式釋放記憶體）
+function releaseMemoryForFish(fishId) {
+  if (!DEMO_MODE.enabled) return;
+  
+  if (DEMO_MODE.memoryBalloons[fishId]) {
+    delete DEMO_MODE.memoryBalloons[fishId];
+    
+    logger.info('memory_released', {
+      eventType: 'memory_event',
+      event: 'memory_released',
+      fishId: fishId,
+      remainingBalloons: Object.keys(DEMO_MODE.memoryBalloons).length,
+      demoMode: true
+    });
+    
+    // 建議 GC 運行（不保證立即執行）
+    if (global.gc) {
+      global.gc();
+    }
+  }
+}
+
+// 檢查是否可以生成魚（Demo 模式限制）
+function canSpawnFish(roomId) {
+  if (!DEMO_MODE.enabled) {
+    return true; // 正常模式無限制
+  }
+  
+  const memStatus = getMemoryStatus(roomId);
+  if (!memStatus) return false;
+  
+  // Demo 模式：檢查魚數量是否達到上限
+  if (memStatus.fishCount >= memStatus.maxFish) {
+    logger.error('fish_spawn_blocked', {
+      eventType: 'game_event',
+      event: 'fish_spawn_blocked',
+      reason: 'memory_limit_reached',
+      roomId: roomId,
+      fishCount: memStatus.fishCount,
+      maxFish: memStatus.maxFish,
+      memoryUsage: memStatus.memoryUsage,
+      maxMemory: DEMO_MODE.maxMemory,
+      heapUsedMB: memStatus.heapUsedMB,
+      heapTotalMB: memStatus.heapTotalMB,
+      rssMB: memStatus.rssMB,
+      demoMode: true
+    });
+    return false;
+  }
+  
+  return true;
 }
 
 // 健康檢查端點
@@ -385,6 +531,8 @@ app.post('/api/v1/collision/detect', (req, res) => {
     reward = fish.value || 10;
     // 移除被擊中的魚
     delete room.fishes[fishId];
+    // Demo 模式：釋放記憶體
+    releaseMemoryForFish(fishId);
   }
 
   // 移除子彈
@@ -427,6 +575,13 @@ function startFishSpawning(roomId) {
     const room = gameState.rooms[roomId];
     if (!room || !room.isActive) return;
 
+    // 檢查是否可以生成魚（Demo 模式限制）
+    if (!canSpawnFish(roomId)) {
+      // 通知前端記憶體已滿
+      io.to(roomId).emit('memory-limit-reached', getMemoryStatus(roomId));
+      return;
+    }
+
     const fishId = 'fish_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     const fishTypes = [
       { type: 'small', value: 2, size: 40, speed: 100 },
@@ -458,10 +613,28 @@ function startFishSpawning(roomId) {
 
     room.fishes[fishId] = fish;
 
-    console.log(`[${new Date().toISOString()}] Fish ${fishId} spawned in room ${roomId}. Room now has ${Object.keys(room.fishes).length} fishes.`);
+    // Demo 模式：分配真實記憶體
+    allocateMemoryForFish(fishId);
+
+    // 記錄魚生成事件
+    const memStatus = getMemoryStatus(roomId);
+    logger.gameEvent('fish_spawned', {
+      fishId: fishId,
+      roomId: roomId,
+      fishType: fishType.type,
+      fishCount: Object.keys(room.fishes).length,
+      memoryUsage: memStatus ? memStatus.memoryUsage : null,
+      heapUsedMB: memStatus ? memStatus.heapUsedMB : null,
+      demoMode: DEMO_MODE.enabled
+    });
 
     // 廣播新魚給房間內所有玩家
     io.to(roomId).emit('fish-spawned', fish);
+
+    // 廣播記憶體狀態
+    if (memStatus) {
+      io.to(roomId).emit('memory-status', memStatus);
+    }
 
     // 魚的移動
     moveFish(roomId, fishId);
@@ -475,11 +648,21 @@ function startFishSpawning(roomId) {
       return;
     }
 
-    // 限制房間內魚的數量
-    const fishCount = Object.keys(room.fishes).length;
-    if (fishCount < 10) {
-      spawnFish();
+    // Demo 模式：檢查記憶體限制
+    if (DEMO_MODE.enabled) {
+      if (!canSpawnFish(roomId)) {
+        // 記憶體已達上限，停止生成魚
+        return;
+      }
     }
+
+    // 限制房間內魚的數量（非 Demo 模式）
+    const fishCount = Object.keys(room.fishes).length;
+    if (!DEMO_MODE.enabled && fishCount >= 25) {
+      return;
+    }
+
+    spawnFish();
   }, 2000);
 }
 
@@ -867,6 +1050,22 @@ function simulateBullet(roomId, bulletId) {
         delete room.fishes[fishId];
         delete room.bullets[bulletId];
 
+        // Demo 模式：釋放記憶體
+        releaseMemoryForFish(fishId);
+
+        // 記錄魚被擊中事件
+        const memStatus = getMemoryStatus(roomId);
+        logger.gameEvent('fish_killed', {
+          fishId: fishId,
+          roomId: roomId,
+          playerId: bullet.playerId,
+          reward: reward,
+          fishCount: Object.keys(room.fishes).length,
+          memoryUsage: memStatus ? memStatus.memoryUsage : null,
+          heapUsedMB: memStatus ? memStatus.heapUsedMB : null,
+          demoMode: DEMO_MODE.enabled
+        });
+
         // 廣播碰撞結果
         io.to(roomId).emit('collision-hit', {
           bulletId: bulletId,
@@ -876,6 +1075,11 @@ function simulateBullet(roomId, bulletId) {
           newScore: room.players[bullet.playerId]?.score || 0,
           newBalance: room.players[bullet.playerId]?.balance || 0
         });
+
+        // 廣播更新後的記憶體狀態
+        if (memStatus) {
+          io.to(roomId).emit('memory-status', memStatus);
+        }
 
         // 單獨通知射擊玩家餘額更新
         const playerSocket = io.sockets.sockets.get(room.players[bullet.playerId]?.socketId);
@@ -1001,6 +1205,127 @@ app.post('/admin/api/config/update', async (req, res) => {
   }
 });
 
+// Demo 模式 API
+app.get('/admin/api/demo-mode', (req, res) => {
+  res.json({
+    success: true,
+    data: DEMO_MODE,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post('/admin/api/demo-mode/toggle', async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    
+    const wasEnabled = DEMO_MODE.enabled;
+    DEMO_MODE.enabled = enabled === true;
+    
+    // 如果從啟用變為關閉，清理所有記憶體氣球
+    if (wasEnabled && !DEMO_MODE.enabled) {
+      const balloonCount = Object.keys(DEMO_MODE.memoryBalloons).length;
+      DEMO_MODE.memoryBalloons = {};
+      
+      logger.info('demo_mode_memory_cleanup', {
+        eventType: 'memory_event',
+        event: 'demo_mode_memory_cleanup',
+        releasedBalloons: balloonCount,
+        timestamp: new Date().toISOString()
+      });
+      
+      // 強制 GC（如果可用）
+      if (global.gc) {
+        global.gc();
+      }
+    }
+    
+    // 儲存到 Redis（如果可用）
+    if (redisClient.isOpen) {
+      await redisClient.hSet('game:config', 'demoMode', DEMO_MODE.enabled ? '1' : '0');
+    }
+    
+    // 廣播給所有房間
+    io.emit('demo-mode-changed', { 
+      enabled: DEMO_MODE.enabled,
+      config: DEMO_MODE
+    });
+    
+    logger.info('demo_mode_changed', {
+      eventType: 'config_event',
+      event: 'demo_mode_changed',
+      enabled: DEMO_MODE.enabled,
+      timestamp: new Date().toISOString()
+    });
+    
+    res.json({
+      success: true,
+      message: `Demo 模式已${DEMO_MODE.enabled ? '啟用' : '關閉'}`,
+      data: DEMO_MODE
+    });
+  } catch (error) {
+    logger.error('demo_mode_toggle_failed', {
+      eventType: 'error_event',
+      event: 'demo_mode_toggle_failed',
+      error: error.message
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Demo 模式切換失敗',
+      error: error.message
+    });
+  }
+});
+
+app.post('/admin/api/demo-mode/config', async (req, res) => {
+  try {
+    const { maxFishCount, memoryPerFish, baseMemory } = req.body;
+    
+    if (memoryPerFish !== undefined) DEMO_MODE.memoryPerFish = parseInt(memoryPerFish);
+    if (baseMemory !== undefined) DEMO_MODE.baseMemory = parseInt(baseMemory);
+    
+    // 根據最大魚數量計算 maxMemory
+    if (maxFishCount !== undefined) {
+      const maxFish = parseInt(maxFishCount);
+      // maxMemory = baseMemory + (maxFish * memoryPerFish)
+      DEMO_MODE.maxMemory = DEMO_MODE.baseMemory + (maxFish * DEMO_MODE.memoryPerFish);
+    }
+    
+    // 儲存到 Redis（如果可用）
+    if (redisClient.isOpen) {
+      await redisClient.hSet('game:config', 'demoModeConfig', JSON.stringify(DEMO_MODE));
+    }
+    
+    // 廣播配置更新給所有客戶端
+    io.emit('demo-mode-config-changed', { 
+      config: DEMO_MODE,
+      maxFish: Math.floor((DEMO_MODE.maxMemory - DEMO_MODE.baseMemory) / DEMO_MODE.memoryPerFish)
+    });
+    
+    logger.info('demo_mode_config_updated', {
+      eventType: 'config_event',
+      event: 'demo_mode_config_updated',
+      config: DEMO_MODE
+    });
+    
+    res.json({
+      success: true,
+      message: 'Demo 模式配置已更新',
+      data: DEMO_MODE
+    });
+  } catch (error) {
+    logger.error('demo_mode_config_update_failed', {
+      eventType: 'error_event',
+      event: 'demo_mode_config_update_failed',
+      error: error.message
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Demo 模式配置更新失敗',
+      error: error.message
+    });
+  }
+});
+
 // 管理後台
 app.get('/admin', async (req, res) => {
   try {
@@ -1072,26 +1397,68 @@ app.use('*', (req, res) => {
 
 // 啟動服務器
 server.listen(PORT, async () => {
-  console.log(`[${new Date().toISOString()}] Game Server Service started on port ${PORT}`);
-  console.log(`[${new Date().toISOString()}] Admin panel: http://localhost:${PORT}/admin`);
-  console.log(`[${new Date().toISOString()}] WebSocket server: ws://localhost:${PORT}`);
-  console.log(`[${new Date().toISOString()}] Health check: http://localhost:${PORT}/health`);
+  logger.info({
+    event: 'server_started',
+    port: PORT,
+    service: 'game-server-service'
+  });
 
   // 連接 Redis
   try {
-    console.log(`[${new Date().toISOString()}] Connecting to Redis at ${process.env.REDIS_HOST || 'redis'}:${process.env.REDIS_PORT || 6379}`);
+    logger.info({
+      event: 'redis_connecting',
+      host: process.env.REDIS_HOST || 'redis',
+      port: process.env.REDIS_PORT || 6379
+    });
     await redisClient.connect();
-    console.log(`[${new Date().toISOString()}] Redis connected successfully`);
+    logger.info({ event: 'redis_connected' });
 
     // 初始化 Redis 組件
     statsCollector = new GameStatsCollector(redisClient);
     configManager = new GameConfigManager(redisClient, io);
-    console.log(`[${new Date().toISOString()}] Redis components initialized`);
+    logger.info({ event: 'redis_components_initialized' });
+
+    // 從 Redis 載入 Demo 模式配置
+    try {
+      const savedDemoMode = await redisClient.hGet('game:config', 'demoMode');
+      if (savedDemoMode) {
+        DEMO_MODE.enabled = savedDemoMode === '1';
+        logger.info({
+          event: 'demo_mode_loaded',
+          enabled: DEMO_MODE.enabled
+        });
+      }
+    } catch (error) {
+      logger.warn({
+        event: 'demo_mode_load_failed',
+        error: error.message
+      });
+    }
 
   } catch (error) {
-    console.error(`[${new Date().toISOString()}] Redis connection failed:`, error);
-    console.error(`[${new Date().toISOString()}] Service will continue without Redis functionality`);
+    logger.error({
+      event: 'redis_connection_failed',
+      error: error.message
+    });
   }
+
+  // 定期廣播記憶體狀態（每 3 秒）
+  setInterval(() => {
+    for (const roomId in gameState.rooms) {
+      const room = gameState.rooms[roomId];
+      if (room && room.isActive && Object.keys(room.players).length > 0) {
+        const memStatus = getMemoryStatus(roomId);
+        if (memStatus) {
+          io.to(roomId).emit('memory-status', memStatus);
+        }
+      }
+    }
+  }, 3000);
+
+  logger.info({
+    event: 'memory_broadcast_started',
+    interval: '3s'
+  });
 });
 
 module.exports = { app, server, io };

@@ -6,6 +6,9 @@ metadata:
   namespace: fish-game-system
   labels:
     app: game-server-service
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
     service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"

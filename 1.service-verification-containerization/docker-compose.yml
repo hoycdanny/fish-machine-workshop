@@ -80,6 +80,15 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # 資源限制（Demo 模式需要固定記憶體）
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
 networks:
   fish-game-network:

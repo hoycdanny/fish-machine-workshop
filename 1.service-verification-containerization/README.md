@@ -10,6 +10,7 @@
 - ✅ **容器間通信**：使用 Docker Compose 服務名稱
 - ✅ **動態配置**：自動適配開發/生產環境
 - ✅ **EKS 就緒**：無需修改代碼即可部署到 Kubernetes
+- ✅ **DevOps Agent Demo 模式**：真實記憶體消耗展示問題分析能力
 
 ## 🏗️ 系統架構
 
@@ -179,28 +180,84 @@ curl -X POST http://localhost:8082/api/v1/lobby/rooms/create \
 docker-compose ps
 curl http://localhost:8081/health
 
-# 2. 推送映像到 ECR
+# 2. 推送映像到 ECR (使用 latest 標籤)
 chmod +x build-and-push.sh
 ./build-and-push.sh
 
-# 3. 使用特定標籤
+# 3. 使用特定標籤 (用於 DevOps Agent Demo)
+./build-and-push.sh v1.0.0
+./build-and-push.sh v1.1.0
+./build-and-push.sh dev
+./build-and-push.sh staging
+./build-and-push.sh production
+```
+
+### 🏷️ 標籤策略 (DevOps Agent Demo)
+
+本專案使用統一的標籤策略，與第0章設定的 AWS 資源標籤保持一致：
+
+**AWS 資源標籤**（EC2、IAM Role、Security Group）：
+- `Project: fish-machine-workshop`
+- `Workshop: fish-machine-workshop`
+- `ManagedBy: UserData`
+
+**ECR 倉庫標籤**（自動添加）：
+- `Project: fish-machine-workshop`
+- `Workshop: fish-machine-workshop`
+- `ManagedBy: build-script`
+
+**Docker 映像標籤**（版本管理）：
+
+| 標籤類型 | 範例 | 用途 | 說明 |
+|---------|------|------|------|
+| **latest** | `latest` | 開發環境 | 最新的開發版本，自動更新 |
+| **版本號** | `v1.0.0`, `v1.1.0` | 生產環境 | 語義化版本，穩定發布 |
+| **環境標籤** | `dev`, `staging`, `production` | 環境隔離 | 不同環境使用不同標籤 |
+| **功能分支** | `feature-login`, `bugfix-123` | 功能測試 | 特定功能的測試版本 |
+
+**DevOps Agent 使用範例：**
+```bash
+# 開發環境：使用 latest 標籤
+./build-and-push.sh latest
+
+# 測試環境：使用 staging 標籤
+./build-and-push.sh staging
+
+# 生產環境：使用版本號標籤
 ./build-and-push.sh v1.0.0
 ```
 
 ### ECR 推送流程
 1. **自動創建 ECR 倉庫**：fish-game-client, fish-game-session, fish-game-server
 2. **構建映像**：使用現有 Dockerfile
-3. **推送到 ECR**：標記並推送映像
+3. **推送到 ECR**：標記並推送映像（支援多標籤）
 4. **驗證推送**：確認映像存在於 ECR
 
 ### 推送完成後
-映像將可用於 EKS 部署：
+映像將可用於 EKS 部署（支援多標籤）：
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:latest`
+- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:v1.0.0`
+- `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-client:staging`
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-session:latest`
 - `{account-id}.dkr.ecr.ap-northeast-2.amazonaws.com/fish-game-server:latest`
 
 **ECR 倉庫管理介面**
 ![ECR 倉庫](image/1.ecr-repo.PNG)
+
+### 🤖 DevOps Agent 整合
+
+本專案的標籤策略設計用於與 DevOps Agent 無縫整合：
+
+**自動化部署流程：**
+1. **開發階段**：推送 `latest` 標籤，觸發開發環境自動部署
+2. **測試階段**：推送 `staging` 標籤，觸發測試環境部署
+3. **生產發布**：推送版本號標籤（如 `v1.0.0`），觸發生產環境部署
+
+**DevOps Agent 可以：**
+- 監控 ECR 標籤變化
+- 根據標籤自動選擇部署環境
+- 執行自動化測試和驗證
+- 管理多環境部署策略
 
 ## 🚢 EKS 遷移指南
 
@@ -317,6 +374,98 @@ docker-compose up -d
 - [Client Service 詳細說明](./services/client-service/README.md)
 - [Game Session Service 詳細說明](./services/game-session-service/README.md)
 - [Game Server Service 詳細說明](./services/game-server-service/README.md)
+
+## 🎯 DevOps Agent Demo 模式
+
+### 功能說明
+
+Demo 模式用於展示 AWS DevOps Agent 的問題分析能力，通過**真實消耗容器記憶體**來模擬生產環境的記憶體壓力問題。
+
+### 核心機制
+
+**記憶體氣球技術（Memory Balloon）**：
+- 每條魚生成時分配 20MB 真實記憶體（Buffer.alloc）
+- 填充隨機數據確保記憶體真實被使用
+- 魚被打掉時釋放對應的 Buffer
+- 容器記憶體會真實上升，可被 Kubernetes 和 CloudWatch 監控
+
+### 使用方式
+
+1. **啟用 Demo 模式**
+   - 訪問管理後台：`http://localhost:8083/admin`
+   - 找到「🎯 DevOps Agent Demo 模式」區塊
+   - 啟用開關
+
+2. **觀察記憶體消耗**
+   - 前端右上角顯示記憶體面板
+   - Demo 模式：顯示魚數量和真實記憶體使用
+   - 每條魚約消耗 20MB 記憶體
+   - 容器記憶體限制：512MB（固定，不會自動增加）
+
+3. **觸發記憶體限制**
+   - 不打魚，讓魚數量自然增加
+   - 達到 15 條魚時（約 300MB）
+   - 停止生成新魚，發出 Error Log
+
+4. **驗證真實記憶體消耗**
+   ```bash
+   # 查看容器記憶體使用
+   docker stats game-server-service
+   
+   # 應該看到：
+   # - MEM USAGE 真實上升
+   # - MEM LIMIT 固定在 512MB
+   # - 15 條魚 ≈ 300MB 記憶體
+   ```
+
+### 資源配置
+
+Docker Compose 已配置固定資源限制：
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '1.0'
+      memory: 512M      # 最大 512MB（固定）
+    reservations:
+      cpus: '0.5'
+      memory: 256M      # 保證 256MB
+```
+
+這確保：
+- 容器記憶體不會自動增加
+- Demo 模式可以真實觸發記憶體限制
+- 模擬真實生產環境的資源約束
+
+### 日誌格式
+
+所有事件以 JSON 格式記錄到 CloudWatch：
+
+```json
+{
+  "level": "info",
+  "message": "game_event",
+  "eventType": "game_event",
+  "event": "fish_spawned",
+  "fishId": "fish_123",
+  "fishCount": 15,
+  "memoryUsage": 65,
+  "heapUsedMB": 350,
+  "demoMode": true,
+  "timestamp": "2026-02-04 10:30:45",
+  "service": "game-server-service"
+}
+```
+
+### DevOps Agent 分析預期
+
+當 Demo 模式觸發記憶體問題時，DevOps Agent 應該能夠：
+
+1. **檢測問題**：發現 `fish_spawn_blocked` 錯誤事件
+2. **關聯分析**：關聯 `fish_spawned` 事件與記憶體上升
+3. **根因分析**：識別出魚數量過多導致記憶體消耗
+4. **建議方案**：調整生成間隔、限制魚數量、增加 Pod memory limit
 
 ## 📚 下一步
 

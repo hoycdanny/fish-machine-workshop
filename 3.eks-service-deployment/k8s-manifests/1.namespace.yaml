@@ -4,3 +4,6 @@ metadata:
   name: fish-game-system
   labels:
     name: fish-game-system
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh

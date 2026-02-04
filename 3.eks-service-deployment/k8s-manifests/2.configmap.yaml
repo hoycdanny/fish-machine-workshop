@@ -3,6 +3,10 @@ kind: ConfigMap
 metadata:
   name: fish-game-config
   namespace: fish-game-system
+  labels:
+    project: fish-machine-workshop
+    workshop: fish-machine-workshop
+    managed-by: 3.eks-service-deployment-deploy.sh
 data:
   # Redis 配置
   REDIS_HOST: "redis-service"

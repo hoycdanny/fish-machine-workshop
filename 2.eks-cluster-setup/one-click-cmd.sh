@@ -5,9 +5,14 @@ echo "🚀 開始 EKS 集群部署..."
 
 # 檢查並設定區域和集群名稱
 export AWS_REGION=${AWS_REGION:-ap-northeast-2}
-export CLUSTER_NAME=${CLUSTER_NAME:-"myeks-$(date +%s)"}
+export CLUSTER_NAME=${CLUSTER_NAME:-"fish-game-cluster"}
+export PROJECT_TAG="fish-machine-workshop"
+export MANAGED_BY_TAG="2.eks-cluster-setup/one-click-cmd.sh"
+
 echo "📍 使用區域: $AWS_REGION"
 echo "🏷️  集群名稱: $CLUSTER_NAME"
+echo "🏷️  專案標籤: $PROJECT_TAG"
+echo "🏷️  管理標籤: $MANAGED_BY_TAG"
 
 # 檢查 AWS 身份
 echo "🔐 檢查 AWS 身份..."
@@ -46,7 +51,14 @@ else
         --nodes-min 1 \
         --nodes-max 4 \
         --managed \
-        --with-oidc
+        --with-oidc \
+        --tags "Project=$PROJECT_TAG,Workshop=$PROJECT_TAG,ManagedBy=$MANAGED_BY_TAG"
+    
+    echo "🏷️  為 EKS 集群添加標籤..."
+    CLUSTER_ARN=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query 'cluster.arn' --output text)
+    aws eks tag-resource \
+        --resource-arn $CLUSTER_ARN \
+        --tags "Project=$PROJECT_TAG,Workshop=$PROJECT_TAG,ManagedBy=$MANAGED_BY_TAG"
 fi
 
 # 檢查節點
@@ -67,9 +79,14 @@ if ! aws iam get-policy --policy-arn $POLICY_ARN &>/dev/null; then
     echo "📋 創建 Load Balancer Controller IAM 政策..."
     aws iam create-policy \
         --policy-name AWSLoadBalancerControllerIAMPolicy \
-        --policy-document file://iam_policy.json
+        --policy-document file://iam_policy.json \
+        --tags "Key=Project,Value=$PROJECT_TAG" "Key=Workshop,Value=$PROJECT_TAG" "Key=ManagedBy,Value=$MANAGED_BY_TAG"
 else
     echo "✅ Load Balancer Controller IAM 政策已存在"
+    # 為現有政策添加標籤
+    aws iam tag-policy \
+        --policy-arn $POLICY_ARN \
+        --tags "Key=Project,Value=$PROJECT_TAG" "Key=Workshop,Value=$PROJECT_TAG" "Key=ManagedBy,Value=$MANAGED_BY_TAG" 2>/dev/null || true
 fi
 
 # 關聯 OIDC provider (如果尚未關聯)
@@ -160,6 +177,128 @@ else
     echo "✅ Metrics Server 已安裝"
 fi
 
+# 安裝 CloudWatch Container Insights
+echo "📊 安裝 CloudWatch Container Insights..."
+echo "這將啟用 Pod 日誌和指標收集到 CloudWatch"
+
+# 安裝 CloudWatch Observability addon
+if ! eksctl get addon --name amazon-cloudwatch-observability --cluster $CLUSTER_NAME &>/dev/null; then
+    echo "📦 安裝 CloudWatch Observability addon..."
+    eksctl create addon \
+        --name amazon-cloudwatch-observability \
+        --cluster $CLUSTER_NAME \
+        --force
+    echo "✅ CloudWatch Observability addon 安裝完成"
+else
+    echo "✅ CloudWatch Observability addon 已安裝"
+fi
+
+# 等待 Pod 啟動
+echo "⏳ 等待 CloudWatch Agent 啟動..."
+sleep 15
+
+# 配置 IAM 權限（使用 IRSA）
+echo "🔐 配置 CloudWatch IAM 權限（IRSA）..."
+
+# 創建 IAM 政策文件
+cat > /tmp/cloudwatch-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeVolumes",
+                "ec2:DescribeTags",
+                "ec2:DescribeInstances"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+
+# 創建或獲取 IAM 政策
+CLOUDWATCH_POLICY_ARN="arn:aws:iam::${ACCOUNT_ID}:policy/CloudWatchAgentServerPolicy"
+
+if ! aws iam get-policy --policy-arn $CLOUDWATCH_POLICY_ARN &>/dev/null; then
+    echo "📋 創建 CloudWatch IAM 政策..."
+    aws iam create-policy \
+        --policy-name CloudWatchAgentServerPolicy \
+        --policy-document file:///tmp/cloudwatch-policy.json \
+        --tags "Key=Project,Value=$PROJECT_TAG" "Key=Workshop,Value=$PROJECT_TAG" "Key=ManagedBy,Value=$MANAGED_BY_TAG"
+    echo "✅ CloudWatch IAM 政策創建完成"
+else
+    echo "✅ CloudWatch IAM 政策已存在"
+fi
+
+# 為 fluent-bit 創建 IRSA
+echo "👤 為 fluent-bit 創建 IRSA..."
+if ! eksctl get iamserviceaccount --cluster $CLUSTER_NAME --namespace amazon-cloudwatch --name fluent-bit &>/dev/null; then
+    eksctl create iamserviceaccount \
+        --cluster $CLUSTER_NAME \
+        --namespace amazon-cloudwatch \
+        --name fluent-bit \
+        --attach-policy-arn $CLOUDWATCH_POLICY_ARN \
+        --approve \
+        --override-existing-serviceaccounts
+    echo "✅ fluent-bit IRSA 創建完成"
+else
+    echo "✅ fluent-bit IRSA 已存在"
+fi
+
+# 為 cloudwatch-agent 創建 IRSA
+echo "👤 為 cloudwatch-agent 創建 IRSA..."
+if ! eksctl get iamserviceaccount --cluster $CLUSTER_NAME --namespace amazon-cloudwatch --name cloudwatch-agent &>/dev/null; then
+    eksctl create iamserviceaccount \
+        --cluster $CLUSTER_NAME \
+        --namespace amazon-cloudwatch \
+        --name cloudwatch-agent \
+        --attach-policy-arn $CLOUDWATCH_POLICY_ARN \
+        --approve \
+        --override-existing-serviceaccounts
+    echo "✅ cloudwatch-agent IRSA 創建完成"
+else
+    echo "✅ cloudwatch-agent IRSA 已存在"
+fi
+
+# 重啟 Pod 以應用新權限
+echo "🔄 重啟 CloudWatch Pods 以應用 IAM 權限..."
+kubectl delete pods -n amazon-cloudwatch -l k8s-app=fluent-bit 2>/dev/null || true
+kubectl delete pods -n amazon-cloudwatch -l name=cloudwatch-agent 2>/dev/null || true
+
+# 等待 Pod 重啟
+echo "⏳ 等待 Pods 重啟完成..."
+sleep 20
+kubectl wait --for=condition=ready pod -l k8s-app=fluent-bit -n amazon-cloudwatch --timeout=120s 2>/dev/null || echo "⚠️  fluent-bit 可能需要更多時間"
+kubectl wait --for=condition=ready pod -l name=cloudwatch-agent -n amazon-cloudwatch --timeout=120s 2>/dev/null || echo "⚠️  cloudwatch-agent 可能需要更多時間"
+
+# 清理臨時文件
+rm -f /tmp/cloudwatch-policy.json
+
+echo "✅ CloudWatch Container Insights 配置完成"
+echo "📊 Pod 日誌將自動發送到 CloudWatch Logs"
+echo "📊 日誌群組: /aws/containerinsights/$CLUSTER_NAME/application"
+echo "⏳ 注意：日誌可能需要 5 分鐘才會開始出現在 CloudWatch 中"
+
 # 創建命名空間
 echo "📁 創建應用命名空間..."
 kubectl create namespace fish-game-system --dry-run=client -o yaml | kubectl apply -f -
@@ -185,6 +324,9 @@ kubectl get deployment -n kube-system aws-load-balancer-controller
 echo "--- Metrics Server ---"
 kubectl get deployment metrics-server -n kube-system
 
+echo "--- CloudWatch Container Insights ---"
+kubectl get pods -n amazon-cloudwatch 2>/dev/null || echo "⚠️  CloudWatch Container Insights 未安裝"
+
 echo ""
 echo "🎉 EKS 集群部署完成！"
 echo "📋 集群資訊:"
@@ -192,5 +334,13 @@ echo "   - 集群名稱: $CLUSTER_NAME"
 echo "   - 區域: $AWS_REGION"
 echo "   - 節點數量: 3 (t3.medium)"
 echo "   - 命名空間: fish-game-system"
+echo ""
+echo "🏷️  資源標籤:"
+echo "   - Project: $PROJECT_TAG"
+echo "   - Workshop: $PROJECT_TAG"
+echo "   - ManagedBy: $MANAGED_BY_TAG"
+echo ""
+echo "🔍 驗證標籤:"
+echo "   aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query 'cluster.tags'"
 echo ""
 echo "🚀 準備進入下一章: 微服務部署到 EKS"

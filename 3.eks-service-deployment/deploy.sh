@@ -7,6 +7,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# 標籤配置
+export PROJECT_TAG="fish-machine-workshop"
+export MANAGED_BY_TAG="3.eks-service-deployment/deploy.sh"
+
 # 日誌函數
 log_info() {
     echo -e "${BLUE}ℹ️  $1${NC}"
@@ -31,6 +35,9 @@ log_step() {
 # 檢查前置條件
 check_prerequisites() {
     log_step "檢查前置條件"
+    
+    log_info "專案標籤: $PROJECT_TAG"
+    log_info "管理標籤: $MANAGED_BY_TAG"
     
     # 檢查 kubectl
     if ! command -v kubectl &> /dev/null; then
