@@ -973,3 +973,140 @@ aws resourcegroupstaggingapi get-resources \
 **🎮 恭喜！你已經成功將魚機遊戲部署到 AWS EKS 生產環境！**
 
 現在你可以邀請朋友通過瀏覽器訪問你的遊戲，體驗雲原生微服務架構的強大功能！
+
+
+## 🧹 完整清理 AWS 環境
+
+### ⚠️ 完整清除（刪除所有資源）
+
+**警告：此操作會刪除所有 AWS 資源，包括 EKS 集群、ECR 映像、CloudWatch 日誌等**
+
+```bash
+cd 3.eks-service-deployment
+./cleanup.sh
+```
+
+### 清除流程
+
+此腳本會執行以下四個階段的清除：
+
+#### 📦 第一階段：清除應用資源
+- ✅ 刪除 Ingress 和 ALB
+- ✅ 刪除 NLB
+- ✅ 刪除所有 Deployments 和 Pods
+- ✅ 刪除 Services 和 ConfigMap
+- ✅ 刪除 fish-game-system 命名空間
+
+#### ☸️ 第二階段：刪除 EKS 集群
+- ✅ 刪除整個 EKS 集群
+- ✅ 刪除所有 EC2 節點（3台 t3.medium）
+- ✅ 刪除 Node Groups
+- ✅ 刪除 VPC 和網路資源
+- ✅ 清理相關的 IAM Roles
+
+#### 🐳 第三階段：清除 ECR 和 CloudWatch
+- ✅ 刪除所有 ECR 映像倉庫：
+  - fish-game-client
+  - fish-game-session
+  - fish-game-server
+- ✅ 刪除所有 CloudWatch 日誌群組
+- ✅ 刪除歷史日誌數據
+
+#### 🔐 第四階段：清理 IAM 政策
+- ✅ 清理 Load Balancer Controller IAM Policy（如果未使用）
+
+### 安全確認
+
+腳本會要求你進行兩次確認：
+
+1. **第一次確認**：輸入 `yes` 確認刪除
+2. **第二次確認**：輸入集群名稱 `fish-game-cluster` 再次確認
+
+### 預計時間
+
+- **總時間**：15-20 分鐘
+- EKS 集群刪除：10-15 分鐘
+- 其他資源清理：3-5 分鐘
+
+### 費用影響
+
+執行完整清除後，將停止以下 AWS 費用：
+
+| 資源類型 | 費用 | 清除後 |
+|---------|------|--------|
+| EKS 集群 | ~$0.10/小時 | ✅ 停止 |
+| EC2 節點 (3台) | ~$0.12/小時 | ✅ 停止 |
+| ALB | ~$0.025/小時 | ✅ 停止 |
+| NLB | ~$0.025/小時 | ✅ 停止 |
+| ECR 儲存 | ~$0.10/GB/月 | ✅ 停止 |
+| CloudWatch 日誌 | ~$0.50/GB | ✅ 停止 |
+
+**總計節省：約 $0.27/小時 + 儲存費用**
+
+### 部分清除（僅清除應用）
+
+如果你只想清除應用但保留 EKS 集群，可以手動執行：
+
+```bash
+# 只刪除應用資源，保留 EKS 集群
+kubectl delete namespace fish-game-system --wait=true
+
+# 或者手動刪除各個資源
+kubectl delete -f k8s-manifests/9.ingress.yaml
+kubectl delete -f k8s-manifests/8.nlb.yaml
+kubectl delete -f k8s-manifests/7.services.yaml
+kubectl delete -f k8s-manifests/6.server-deployment.yaml
+kubectl delete -f k8s-manifests/5.session-deployment.yaml
+kubectl delete -f k8s-manifests/4.client-deployment.yaml
+kubectl delete -f k8s-manifests/3.redis-deployment.yaml
+kubectl delete -f k8s-manifests/2.configmap.yaml
+kubectl delete -f k8s-manifests/1.namespace.yaml
+```
+
+這樣可以保留集群，稍後快速重新部署應用。
+
+### 驗證清除結果
+
+清除完成後，腳本會自動驗證：
+
+```bash
+# 檢查 EKS 集群
+aws eks describe-cluster --name fish-game-cluster --region ap-northeast-2
+# 應該返回：ResourceNotFoundException
+
+# 檢查 ECR 倉庫
+aws ecr describe-repositories --region ap-northeast-2 | grep fish-game
+# 應該沒有輸出
+
+# 檢查 CloudWatch 日誌
+aws logs describe-log-groups \
+  --log-group-name-prefix /aws/containerinsights/fish-game-cluster \
+  --region ap-northeast-2
+# 應該沒有輸出
+```
+
+### 重新部署
+
+如需重新部署整個環境：
+
+```bash
+# 1. 創建 EKS 集群
+cd 2.eks-cluster-setup
+./one-click-cmd.sh
+
+# 2. 構建並推送映像
+cd ../1.service-verification-containerization
+./build-and-push.sh
+
+# 3. 部署應用
+cd ../3.eks-service-deployment
+./deploy.sh
+```
+
+---
+
+**📝 注意事項：**
+- 清除操作不可逆，請確保已備份重要數據
+- CloudWatch 日誌刪除後無法恢復
+- ECR 映像刪除後需要重新構建和推送
+- 建議在清除前導出重要的配置和數據
